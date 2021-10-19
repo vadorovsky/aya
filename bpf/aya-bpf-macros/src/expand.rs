@@ -401,9 +401,8 @@ impl Lsm {
         Ok(quote! {
             #[no_mangle]
             #[link_section = #section_name]
-            fn #fn_name(ctx: *mut ::core::ffi::c_void) -> u32 {
-                let _ = #fn_name(::aya_bpf::programs::LsmContext::new(ctx));
-                return 0;
+            fn #fn_name(ctx: *mut ::core::ffi::c_void) -> i32 {
+                return #fn_name(::aya_bpf::programs::LsmContext::new(ctx));
 
                 #item
             }
