@@ -28,12 +28,12 @@ impl SkBuff {
         unsafe { *self.skb }.len
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn data(&self) -> usize {
         unsafe { (*self.skb).data as usize }
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn data_end(&self) -> usize {
         unsafe { (*self.skb).data_end as usize }
     }

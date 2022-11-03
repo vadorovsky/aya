@@ -18,12 +18,12 @@ impl TcContext {
         self.skb.len()
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn data(&self) -> usize {
         self.skb.data()
     }
 
-    #[inline]
+    #[inline(always)]
     pub fn data_end(&self) -> usize {
         self.skb.data_end()
     }
