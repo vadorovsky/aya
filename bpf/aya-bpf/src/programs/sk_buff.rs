@@ -29,13 +29,13 @@ impl SkBuff {
     }
 
     #[inline]
-    pub(crate) fn data(&self) -> usize {
-        unsafe { (*self.skb).data as usize }
+    pub(crate) fn data(&self) -> *mut u8 {
+        unsafe { (*self.skb).data as *mut u8 }
     }
 
     #[inline]
-    pub(crate) fn data_end(&self) -> usize {
-        unsafe { (*self.skb).data_end as usize }
+    pub(crate) fn data_end(&self) -> *mut u8 {
+        unsafe { (*self.skb).data_end as *mut u8 }
     }
 
     #[inline]

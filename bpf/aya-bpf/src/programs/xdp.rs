@@ -12,24 +12,24 @@ impl XdpContext {
     }
 
     #[inline]
-    pub fn data(&self) -> usize {
-        unsafe { (*self.ctx).data as usize }
+    pub fn data(&self) -> *mut u8 {
+        unsafe { (*self.ctx).data as *mut u8 }
     }
 
     #[inline]
-    pub fn data_end(&self) -> usize {
-        unsafe { (*self.ctx).data_end as usize }
+    pub fn data_end(&self) -> *mut u8 {
+        unsafe { (*self.ctx).data_end as *mut u8 }
     }
 
     /// Return the raw address of the XdpContext metadata.
     #[inline(always)]
-    pub fn metadata(&self) -> usize {
-        unsafe { (*self.ctx).data_meta as usize }
+    pub fn metadata(&self) -> *mut u8 {
+        unsafe { (*self.ctx).data_meta as *mut u8 }
     }
 
     /// Return the raw address immediately after the XdpContext's metadata.
     #[inline(always)]
-    pub fn metadata_end(&self) -> usize {
+    pub fn metadata_end(&self) -> *mut u8 {
         self.data()
     }
 }

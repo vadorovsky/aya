@@ -19,12 +19,12 @@ impl TcContext {
     }
 
     #[inline]
-    pub fn data(&self) -> usize {
+    pub fn data(&self) -> *mut u8 {
         self.skb.data()
     }
 
     #[inline]
-    pub fn data_end(&self) -> usize {
+    pub fn data_end(&self) -> *mut u8 {
         self.skb.data_end()
     }
 
