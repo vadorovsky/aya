@@ -6,7 +6,7 @@ publish = false
 
 [dependencies]
 anyhow = "1"
-aya = { path = "../../aya" }
+aya = { path = "../../aya", features = ["async_tokio"] }
 aya-obj = { path = "../../aya-obj" }
 clap = { version = "4", features = ["derive"] }
 env_logger = "0.10"
@@ -18,7 +18,9 @@ libc = { version = "0.2.105" }
 log = "0.4"
 object = { version = "0.30", default-features = false, features = ["std", "read_core", "elf"] }
 rbpf = "0.1.0"
+procfs = "0.14"
 regex = "1"
 tempfile = "3.3.0"
 libtest-mimic = "0.6.0"
 tokio = { version = "1.24", features = ["rt", "rt-multi-thread"] }
+bytes = "1"

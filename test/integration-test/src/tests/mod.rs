@@ -8,6 +8,7 @@ pub mod elf;
 pub mod load;
 pub mod rbpf;
 pub mod relocations;
+pub mod ringbuf;
 pub mod smoke;
 
 pub use integration_test_macros::{integration_test, tokio_integration_test};
