@@ -64,6 +64,7 @@ use crate::{
 };
 
 pub mod array;
+pub mod async_ringbuf;
 pub mod bloom_filter;
 pub mod hash_map;
 pub mod lpm_trie;
@@ -75,6 +76,7 @@ pub mod stack;
 pub mod stack_trace;
 
 pub use array::{Array, PerCpuArray, ProgramArray};
+pub use async_ringbuf::AsyncRingBuf;
 pub use bloom_filter::BloomFilter;
 pub use hash_map::{HashMap, PerCpuHashMap};
 pub use lpm_trie::LpmTrie;
@@ -343,6 +345,7 @@ impl_try_from_map!(
 #[cfg_attr(docsrs, doc(cfg(feature = "async")))]
 impl_try_from_map!(
     AsyncPerfEventArray from Map::PerfEventArray,
+    AsyncRingBuf from Map::RingBuf,
 );
 
 macro_rules! impl_try_from_map_generic_key_or_value {
