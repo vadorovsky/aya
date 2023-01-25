@@ -102,6 +102,7 @@ impl RingBuf {
     /// `T` must be aligned to 1, 2, 4 or 8 bytes; it's not possible to fulfill larger alignment
     /// requests. If you use this with a `T` that isn't properly aligned, this function will
     /// be compiled to a panic and silently make your eBPF program fail to load.
+    #[inline(always)]
     pub fn reserve<T: 'static>(&self, flags: u64) -> Option<RingBufEntry<T>> {
         // The reserved pointer may be null, which we handle with an Option.
         // We also need to ensure that the returned pointer is of a proper sized allocation and
