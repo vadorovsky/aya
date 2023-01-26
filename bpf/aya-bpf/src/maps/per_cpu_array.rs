@@ -71,6 +71,10 @@ impl<T> PerCpuArray<T> {
             self.def.get() as *mut _,
             &index as *const _ as *const c_void,
         );
-        NonNull::new(ptr as *mut T)
+        if ptr as usize <= 0 {
+            None
+        } else {
+            Some(NonNull::new_unchecked(ptr as *mut T))
+        }
     }
 }
