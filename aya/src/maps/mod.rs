@@ -66,6 +66,7 @@ use crate::{
 pub mod array;
 pub mod bloom_filter;
 pub mod hash_map;
+pub mod hash_of_maps;
 pub mod lpm_trie;
 pub mod perf;
 pub mod queue;
