@@ -55,12 +55,10 @@ pub fn build<F>(target: Option<&str>, f: F) -> Result<Vec<(String, PathBuf)>>
 where
     F: FnOnce(&mut Command) -> &mut Command,
 {
-    // Always use rust-lld and -Zbuild-std in case we're cross-compiling.
     let mut cmd = Command::new("cargo");
     cmd.args(["build", "--message-format=json"]);
     if let Some(target) = target {
-        let config = format!("target.{target}.linker = \"rust-lld\"");
-        cmd.args(["--target", target, "--config", &config]);
+        cmd.args(["--target", target]);
     }
     f(&mut cmd);
 
