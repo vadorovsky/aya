@@ -50,7 +50,7 @@
 //! [log]: https://docs.rs/log
 //!
 use std::{
-    fmt::{LowerHex, UpperHex},
+    fmt::{self, LowerHex, UpperHex},
     io, mem,
     net::{Ipv4Addr, Ipv6Addr},
     ptr, str,
@@ -194,6 +194,16 @@ where
     }
 }
 
+pub struct DebugFormatter;
+impl<T> Formatter<T> for DebugFormatter
+where
+    T: fmt::Debug,
+{
+    fn format(v: T) -> String {
+        format!("{v:?}")
+    }
+}
+
 pub struct LowerHexFormatter;
 impl<T> Formatter<T> for LowerHexFormatter
 where
@@ -289,6 +299,7 @@ trait Format {
 impl Format for &[u8] {
     fn format(&self, last_hint: Option<DisplayHintWrapper>) -> Result<String, ()> {
         match last_hint.map(|DisplayHintWrapper(dh)| dh) {
+            Some(DisplayHint::Debug) => Ok(DebugFormatter::format(self)),
             Some(DisplayHint::LowerHex) => Ok(LowerHexDebugFormatter::format(self)),
             Some(DisplayHint::UpperHex) => Ok(UpperHexDebugFormatter::format(self)),
             _ => Err(()),

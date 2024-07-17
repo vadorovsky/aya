@@ -109,6 +109,7 @@ pub(crate) fn log(args: LogArgs, level: Option<TokenStream>) -> Result<TokenStre
                     DisplayHint::Default => {
                         (quote!(DisplayHint::Default), quote!(DefaultFormatter))
                     }
+                    DisplayHint::Debug => (quote!(DisplayHint::Debug), quote!(DebugFormatter)),
                     DisplayHint::LowerHex => {
                         (quote!(DisplayHint::LowerHex), quote!(LowerHexFormatter))
                     }

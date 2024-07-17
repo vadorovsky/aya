@@ -135,6 +135,8 @@ pub enum Argument {
 pub enum DisplayHint {
     /// Default string representation.
     Default = 1,
+    /// `:?`
+    Debug,
     /// `:x`
     LowerHex,
     /// `:X`
