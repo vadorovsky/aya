@@ -36,6 +36,16 @@ use crate::{
     Btf, Pod, VerifierLogLevel, BPF_OBJ_NAME_LEN, FEATURES,
 };
 
+pub(crate) fn bpf_create_iter(link_fd: BorrowedFd<'_>) -> SysResult<crate::MockableFd> {
+    let mut attr = unsafe { mem::zeroed::<bpf_attr>() };
+
+    let u = unsafe { &mut attr.iter_create };
+    u.link_fd = link_fd.as_raw_fd() as u32;
+
+    // SAFETY: BPF_ITER_CREATE returns a new file descriptor.
+    unsafe { fd_sys_bpf(bpf_cmd::BPF_ITER_CREATE, &mut attr) }
+}
+
 pub(crate) fn bpf_create_map(
     name: &CStr,
     def: &obj::Map,
@@ -375,6 +385,7 @@ pub(crate) fn bpf_map_freeze(fd: BorrowedFd<'_>) -> SysResult<i64> {
 }
 
 pub(crate) enum LinkTarget<'f> {
+    BtfId,
     Fd(BorrowedFd<'f>),
     IfIndex(u32),
 }
@@ -393,6 +404,9 @@ pub(crate) fn bpf_link_create(
     attr.link_create.__bindgen_anon_1.prog_fd = prog_fd.as_raw_fd() as u32;
 
     match target {
+        LinkTarget::BtfId => {
+            attr.link_create.__bindgen_anon_2.target_fd = 0;
+        }
         LinkTarget::Fd(fd) => {
             attr.link_create.__bindgen_anon_2.target_fd = fd.as_raw_fd() as u32;
         }

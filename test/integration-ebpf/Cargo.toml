@@ -72,3 +72,7 @@ path = "src/memmove_test.rs"
 [[bin]]
 name = "simple_prog"
 path = "src/simple_prog.rs"
+
+[[bin]]
+name = "iter"
+path = "src/iter.rs"

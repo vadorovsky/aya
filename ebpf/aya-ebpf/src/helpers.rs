@@ -838,3 +838,23 @@ pub unsafe fn bpf_printk_impl<const FMT_LEN: usize, const NUM_ARGS: usize>(
         _ => gen::bpf_trace_vprintk(fmt_ptr, fmt_size, args.as_ptr() as _, (NUM_ARGS * 8) as _),
     }
 }
+
+#[macro_export]
+macro_rules! bpf_seq_printf {
+    ($seq:expr, $fmt:literal $(,)? $($arg:expr),* $(,)?) => {{
+        let seq_ptr = $seq.as_ptr();
+        let fmt = $fmt.to_bytes();
+        let fmt_ptr = fmt.as_ptr() as *const $crate::cty::c_char;
+        let fmt_size = fmt.len() as u32;
+        let data = [$(PrintkArg::from($arg)),*];
+        unsafe {
+            $crate::helpers::gen::bpf_seq_printf(
+                seq_ptr,
+                fmt_ptr,
+                fmt_size,
+                data.as_ptr() as _,
+                (fmt.len() * 8) as _
+            );
+        }
+    }};
+}

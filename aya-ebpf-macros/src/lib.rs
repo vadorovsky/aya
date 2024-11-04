@@ -8,6 +8,7 @@ mod cgroup_sockopt;
 mod cgroup_sysctl;
 mod fentry;
 mod fexit;
+mod iter;
 mod kprobe;
 mod lsm;
 mod map;
@@ -32,6 +33,7 @@ use cgroup_sockopt::CgroupSockopt;
 use cgroup_sysctl::CgroupSysctl;
 use fentry::FEntry;
 use fexit::FExit;
+use iter::Iter;
 use kprobe::{KProbe, KProbeKind};
 use lsm::Lsm;
 use map::Map;
@@ -48,6 +50,7 @@ use tc::SchedClassifier;
 use tracepoint::TracePoint;
 use uprobe::{UProbe, UProbeKind};
 use xdp::Xdp;
+
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn map(attrs: TokenStream, item: TokenStream) -> TokenStream {
@@ -660,6 +663,19 @@ pub fn sk_lookup(attrs: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn cgroup_device(attrs: TokenStream, item: TokenStream) -> TokenStream {
     match CgroupDevice::parse(attrs.into(), item.into()) {
+        Ok(prog) => prog
+            .expand()
+            .unwrap_or_else(|err| abort!(err.span(), "{}", err))
+            .into(),
+        Err(err) => abort!(err.span(), "{}", err),
+    }
+}
+
+/// Marks a function as an iterator eBPF program.
+#[proc_macro_error]
+#[proc_macro_attribute]
+pub fn iter(attrs: TokenStream, item: TokenStream) -> TokenStream {
+    match Iter::parse(attrs.into(), item.into()) {
         Ok(prog) => prog
             .expand()
             .unwrap_or_else(|err| abort!(err.span(), "{}", err))
