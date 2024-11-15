@@ -27,8 +27,12 @@ name = "log"
 path = "src/log.rs"
 
 [[bin]]
-name = "map_test"
-path = "src/map_test.rs"
+name = "map_info"
+path = "src/map_info.rs"
+
+[[bin]]
+name = "maps"
+path = "src/maps.rs"
 
 [[bin]]
 name = "memmove_test"

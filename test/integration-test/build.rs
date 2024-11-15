@@ -50,10 +50,9 @@ fn main() -> Result<()> {
         .no_deps()
         .exec()
         .context("MetadataCommand::exec")?;
-    let integration_ebpf_package = packages
+    let integration_ebpf_packages = packages
         .into_iter()
-        .find(|Package { name, .. }| name == "integration-ebpf")
-        .ok_or_else(|| anyhow!("integration-ebpf package not found"))?;
+        .filter(|Package { name, .. }| name.starts_with("integration-ebpf"));
 
     let manifest_dir =
         env::var_os("CARGO_MANIFEST_DIR").ok_or(anyhow!("CARGO_MANIFEST_DIR not set"))?;
@@ -182,7 +181,7 @@ fn main() -> Result<()> {
             }
         }
 
-        aya_build::build_ebpf([integration_ebpf_package])?;
+        aya_build::build_ebpf(integration_ebpf_package)?;
     } else {
         for (src, build_btf) in C_BPF {
             let dst = out_dir.join(src).with_extension("o");
@@ -193,13 +192,15 @@ fn main() -> Result<()> {
             }
         }
 
-        let Package { targets, .. } = integration_ebpf_package;
-        for Target { name, kind, .. } in targets {
-            if *kind != [TargetKind::Bin] {
-                continue;
+        for integration_ebpf_package in integration_ebpf_packages {
+            let Package { targets, .. } = integration_ebpf_package;
+            for Target { name, kind, .. } in targets {
+                if *kind != ["bin"] {
+                    continue;
+                }
+                let dst = out_dir.join(name);
+                fs::write(&dst, []).with_context(|| format!("failed to create {dst:?}"))?;
             }
-            let dst = out_dir.join(name);
-            fs::write(&dst, []).with_context(|| format!("failed to create {dst:?}"))?;
         }
     }
     Ok(())

@@ -11,11 +11,10 @@ use xdpilone::{BufIdx, IfInfo, Socket, SocketConfig, Umem, UmemConfig};
 
 use crate::utils::NetNsGuard;
 
-#[test]
-fn af_xdp() {
+fn af_xdp(prog: &[u8]) {
     let _netns = NetNsGuard::new();
 
-    let mut bpf = Ebpf::load(crate::REDIRECT).unwrap();
+    let mut bpf = Ebpf::load(prog).unwrap();
     let mut socks: XskMap<_> = bpf.take_map("SOCKS").unwrap().try_into().unwrap();
 
     let xdp: &mut Xdp = bpf
@@ -85,6 +84,16 @@ fn af_xdp() {
 }
 
 #[test]
+fn af_xdp_without_btf() {
+    af_xdp(crate::REDIRECT)
+}
+
+#[test]
+fn af_xdp_with_btf() {
+    af_xdp(crate::REDIRECT_BTF)
+}
+
+#[test]
 fn prog_sections() {
     let obj_file = object::File::parse(crate::XDP_SEC).unwrap();
 
@@ -130,11 +139,10 @@ fn map_load() {
     bpf.program("xdp_frags_devmap").unwrap();
 }
 
-#[test]
-fn cpumap_chain() {
+fn cpumap_chain(prog: &[u8]) {
     let _netns = NetNsGuard::new();
 
-    let mut bpf = Ebpf::load(crate::REDIRECT).unwrap();
+    let mut bpf = Ebpf::load(prog).unwrap();
 
     // Load our cpumap and our canary map
     let mut cpus: CpuMap<_> = bpf.take_map("CPUS").unwrap().try_into().unwrap();
@@ -173,4 +181,14 @@ fn cpumap_chain() {
     assert_eq!(&buf[..n], PAYLOAD.as_bytes());
     assert_eq!(hits.get(&0, 0).unwrap(), 1);
     assert_eq!(hits.get(&1, 0).unwrap(), 1);
+}
+
+#[test]
+fn cpumap_chain_without_btf() {
+    cpumap_chain(crate::REDIRECT)
+}
+
+#[test]
+fn cpumap_chain_with_btf() {
+    cpumap_chain(crate::REDIRECT_BTF)
 }
