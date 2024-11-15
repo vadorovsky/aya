@@ -449,6 +449,7 @@ impl Btf {
                         type_id = next;
                         continue;
                     } else {
+                        log::warn!("unexpected BTF type: {ty:?}");
                         return Err(BtfError::UnexpectedBtfType { type_id });
                     }
                 }
