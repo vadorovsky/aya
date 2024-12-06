@@ -15,6 +15,7 @@ pub mod sock_hash;
 pub mod sock_map;
 pub mod stack;
 pub mod stack_trace;
+pub mod task_storage;
 pub mod xdp;
 
 pub use array::Array;
