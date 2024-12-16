@@ -313,6 +313,8 @@ pub enum Map {
     Stack(MapData),
     /// A [`StackTraceMap`] map.
     StackTraceMap(MapData),
+    /// A `TaskStorage` map.
+    TaskStorage(MapData),
     /// An unsupported map type.
     Unsupported(MapData),
     /// A [`XskMap`] map.
@@ -342,6 +344,7 @@ impl Map {
             Self::SockMap(map) => map.obj.map_type(),
             Self::Stack(map) => map.obj.map_type(),
             Self::StackTraceMap(map) => map.obj.map_type(),
+            Self::TaskStorage(map) => map.obj.map_type(),
             Self::Unsupported(map) => map.obj.map_type(),
             Self::XskMap(map) => map.obj.map_type(),
         }
@@ -372,6 +375,7 @@ impl Map {
             Self::SockMap(map) => map.pin(path),
             Self::Stack(map) => map.pin(path),
             Self::StackTraceMap(map) => map.pin(path),
+            Self::TaskStorage(map) => map.pin(path),
             Self::Unsupported(map) => map.pin(path),
             Self::XskMap(map) => map.pin(path),
         }
