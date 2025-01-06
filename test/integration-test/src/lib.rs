@@ -16,6 +16,7 @@ pub const VARIABLES_RELOC: &[u8] =
 pub const BPF_PROBE_READ: &[u8] =
     include_bytes_aligned!(concat!(env!("OUT_DIR"), "/bpf_probe_read"));
 pub const LOG: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/log"));
+pub const LSM: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/lsm"));
 pub const MAP_TEST: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/map_test"));
 pub const MEMMOVE_TEST: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/memmove_test"));
 pub const NAME_TEST: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/name_test"));

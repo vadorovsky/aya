@@ -5,6 +5,7 @@ mod info;
 mod iter;
 mod load;
 mod log;
+mod lsm;
 mod rbpf;
 mod relocations;
 mod ring_buf;
