@@ -31,6 +31,7 @@ pub const RING_BUF: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/ri
 pub const RING_BUF_BTF: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/ring_buf_btf"));
 pub const SIMPLE_PROG: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/simple_prog"));
 pub const STRNCMP: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/strncmp"));
+pub const TASK_STORAGE: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/task_storage"));
 pub const TCX: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/tcx"));
 pub const TEST: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/test"));
 pub const TWO_PROGS: &[u8] = include_bytes_aligned!(concat!(env!("OUT_DIR"), "/two_progs"));

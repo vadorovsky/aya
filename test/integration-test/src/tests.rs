@@ -12,6 +12,7 @@ mod relocations;
 mod ring_buf;
 mod smoke;
 mod strncmp;
+mod task_storage;
 mod tcx;
 mod uprobe_cookie;
 mod xdp;
