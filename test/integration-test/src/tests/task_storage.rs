@@ -1,4 +1,6 @@
 use std::{
+    fs::File,
+    io::Write,
     process,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -8,7 +10,12 @@ use std::{
     time::Duration,
 };
 
-use aya::{maps::TaskStorage, programs::FExit, Btf, Ebpf};
+use aya::{
+    maps::TaskStorage,
+    programs::{FExit, RawTracePoint},
+    Btf, Ebpf,
+};
+use tempfile::tempfile;
 use test_log::test;
 
 #[test]
@@ -23,6 +30,29 @@ fn test_task_storage_get() {
     let btf = Btf::from_sys_fs().unwrap();
     prog.load("sched_post_fork", &btf).unwrap();
     prog.attach().unwrap();
+
+    let prog: &mut RawTracePoint = ebpf
+        .program_mut("sched_process_fork")
+        .unwrap()
+        .try_into()
+        .unwrap();
+    prog.load().unwrap();
+    prog.attach("sched_process_fork").unwrap();
+
+    // let prog: &mut FExit = ebpf
+    //     .program_mut("security_file_open")
+    //     .unwrap()
+    //     .try_into()
+    //     .unwrap();
+    // let btf = Btf::from_sys_fs().unwrap();
+    // prog.load("security_file_open", &btf).unwrap();
+    // prog.attach().unwrap();
+
+    sleep(Duration::from_millis(100));
+
+    // let mut file = tempfile().unwrap();
+    // write!(file, "Hello World!").unwrap();
+    // file.flush().unwrap();
 
     let task_storage: TaskStorage<_, u32> =
         TaskStorage::try_from(ebpf.map_mut("task_storage").unwrap()).unwrap();
@@ -59,7 +89,12 @@ fn test_task_storage_get() {
 
     sleep(Duration::from_millis(100));
 
-    let value = task_storage.get(&tid, 0).unwrap();
+    let pid = process::id();
+    let pid = pid;
+    println!("by pid ({pid}): {:?}", task_storage.get(&pid, 0));
+    println!("by tid ({tid}): {:?}", task_storage.get(&tid, 0));
+
+    let value = task_storage.get(&pid, 0).unwrap();
     assert_eq!(value, 1);
 
     stop.store(true, Ordering::Relaxed);
