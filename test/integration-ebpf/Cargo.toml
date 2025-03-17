@@ -28,6 +28,10 @@ name = "bpf_probe_read"
 path = "src/bpf_probe_read.rs"
 
 [[bin]]
+name = "helpers"
+path = "src/helpers.rs"
+
+[[bin]]
 name = "log"
 path = "src/log.rs"
 
