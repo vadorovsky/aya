@@ -160,6 +160,8 @@ pub struct Object {
     // symbol_offset_by_name caches symbols that could be referenced from a
     // BTF VAR type so the offsets can be fixed up
     pub(crate) symbol_offset_by_name: HashMap<String, u64>,
+    /// Externs
+    pub externs: HashMap<String, Extern>,
 }
 
 /// An eBPF program
@@ -454,6 +456,23 @@ impl FromStr for ProgramSection {
     }
 }
 
+/// External symbol
+#[derive(Debug, Clone)]
+pub struct Extern {
+    extern_type: ExternType,
+}
+
+/// Type of an external symbol
+#[derive(Debug, Clone)]
+pub enum ExternType {
+    /// Unknown
+    Unknown,
+    /// `KCFG`
+    Kcfg,
+    /// `KSYM`
+    Ksym,
+}
+
 impl Object {
     /// Parses the binary data as an object file into an [Object]
     pub fn parse(data: &[u8]) -> Result<Object, ParseError> {
@@ -542,6 +561,7 @@ impl Object {
             symbols_by_section: HashMap::new(),
             section_infos: HashMap::new(),
             symbol_offset_by_name: HashMap::new(),
+            externs: HashMap::new(),
         }
     }
 
