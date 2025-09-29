@@ -48,40 +48,34 @@ impl<K, V> HashMap<K, V> {
         }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    ///
-    /// # Safety
-    ///
-    /// Unless the map flag `BPF_F_NO_PREALLOC` is used, the kernel does not guarantee the atomicity
-    /// of `insert` or `remove`, and any element removed from the map might get aliased by another
-    /// element in the map, causing garbage to be read, or corruption in case of writes.
+    #[doc = "Retrieves the value associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub unsafe fn get(&self, key: &K) -> Option<&V> {
         unsafe { get(self.def.get(), key) }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, but this returns a raw pointer and it's up to the caller
-    /// to decide whether it's safe to dereference the pointer or not.
+    #[doc = "Retrieves the pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr(&self, key: &K) -> Option<*const V> {
         get_ptr(self.def.get(), key)
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, and additionally cares should be taken to avoid
-    /// concurrent writes, but it's up to the caller to decide whether it's safe to dereference the
-    /// pointer or not.
+    #[doc = "Retrieves the mutable pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr_mut(&self, key: &K) -> Option<*mut V> {
         get_ptr_mut(self.def.get(), key)
     }
 
+    /// Inserts a key-value pair into the map.
     #[inline]
     pub fn insert(&self, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
         insert(self.def.get().cast(), key, value, flags)
     }
 
+    /// Removes a key from the map.
     #[inline]
     pub fn remove(&self, key: &K) -> Result<(), c_long> {
         remove(self.def.get().cast(), key)
@@ -124,40 +118,34 @@ impl<K, V> LruHashMap<K, V> {
         }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    ///
-    /// # Safety
-    ///
-    /// Unless the map flag `BPF_F_NO_PREALLOC` is used, the kernel does not guarantee the atomicity
-    /// of `insert` or `remove`, and any element removed from the map might get aliased by another
-    /// element in the map, causing garbage to be read, or corruption in case of writes.
+    #[doc = "Retrieves the value associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub unsafe fn get(&self, key: &K) -> Option<&V> {
         unsafe { get(self.def.get(), key) }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, but this returns a raw pointer and it's up to the caller
-    /// to decide whether it's safe to dereference the pointer or not.
+    #[doc = "Retrieves the pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr(&self, key: &K) -> Option<*const V> {
         get_ptr(self.def.get(), key)
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, and additionally cares should be taken to avoid
-    /// concurrent writes, but it's up to the caller to decide whether it's safe to dereference the
-    /// pointer or not.
+    #[doc = "Retrieves the mutable pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr_mut(&self, key: &K) -> Option<*mut V> {
         get_ptr_mut(self.def.get(), key)
     }
 
+    /// Inserts a key-value pair into the map.
     #[inline]
     pub fn insert(&self, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
         insert(self.def.get().cast(), key, value, flags)
     }
 
+    /// Removes a key from the map.
     #[inline]
     pub fn remove(&self, key: &K) -> Result<(), c_long> {
         remove(self.def.get().cast(), key)
@@ -200,40 +188,34 @@ impl<K, V> PerCpuHashMap<K, V> {
         }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    ///
-    /// # Safety
-    ///
-    /// Unless the map flag `BPF_F_NO_PREALLOC` is used, the kernel does not guarantee the atomicity
-    /// of `insert` or `remove`, and any element removed from the map might get aliased by another
-    /// element in the map, causing garbage to be read, or corruption in case of writes.
+    #[doc = "Retrieves the value associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub unsafe fn get(&self, key: &K) -> Option<&V> {
         unsafe { get(self.def.get(), key) }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, but this returns a raw pointer and it's up to the caller
-    /// to decide whether it's safe to dereference the pointer or not.
+    #[doc = "Retrieves the pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr(&self, key: &K) -> Option<*const V> {
         get_ptr(self.def.get(), key)
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, and additionally cares should be taken to avoid
-    /// concurrent writes, but it's up to the caller to decide whether it's safe to dereference the
-    /// pointer or not.
+    #[doc = "Retrieves the mutable pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr_mut(&self, key: &K) -> Option<*mut V> {
         get_ptr_mut(self.def.get(), key)
     }
 
+    /// Inserts a key-value pair into the map.
     #[inline]
     pub fn insert(&self, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
         insert(self.def.get().cast(), key, value, flags)
     }
 
+    /// Removes a key from the map.
     #[inline]
     pub fn remove(&self, key: &K) -> Result<(), c_long> {
         remove(self.def.get().cast(), key)
@@ -276,40 +258,34 @@ impl<K, V> LruPerCpuHashMap<K, V> {
         }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    ///
-    /// # Safety
-    ///
-    /// Unless the map flag `BPF_F_NO_PREALLOC` is used, the kernel does not guarantee the atomicity
-    /// of `insert` or `remove`, and any element removed from the map might get aliased by another
-    /// element in the map, causing garbage to be read, or corruption in case of writes.
+    #[doc = "Retrieves the value associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub unsafe fn get(&self, key: &K) -> Option<&V> {
         unsafe { get(self.def.get(), key) }
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, but this returns a raw pointer and it's up to the caller
-    /// to decide whether it's safe to dereference the pointer or not.
+    #[doc = "Retrieves the pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr(&self, key: &K) -> Option<*const V> {
         get_ptr(self.def.get(), key)
     }
 
-    /// Retrieve the value associate with `key` from the map.
-    /// The same caveat as `get` applies, and additionally cares should be taken to avoid
-    /// concurrent writes, but it's up to the caller to decide whether it's safe to dereference the
-    /// pointer or not.
+    #[doc = "Retrieves the mutable pointer associated with `key` from the map."]
+    #[doc = include_str!("map_safety.md")]
     #[inline]
     pub fn get_ptr_mut(&self, key: &K) -> Option<*mut V> {
         get_ptr_mut(self.def.get(), key)
     }
 
+    /// Inserts a key-value pair into the map.
     #[inline]
     pub fn insert(&self, key: &K, value: &V, flags: u64) -> Result<(), c_long> {
         insert(self.def.get().cast(), key, value, flags)
     }
 
+    /// Removes a key from the map.
     #[inline]
     pub fn remove(&self, key: &K) -> Result<(), c_long> {
         remove(self.def.get().cast(), key)
