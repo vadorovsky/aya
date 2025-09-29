@@ -1,8 +1,10 @@
 use core::marker::PhantomData;
 
 pub mod array;
+pub mod hash_map;
 
 pub use array::Array;
+pub use hash_map::{HashMap, LruHashMap, LruPerCpuHashMap, PerCpuHashMap};
 
 /// A marker used to remove names of annotated types in LLVM debug info and
 /// therefore also in BTF.
