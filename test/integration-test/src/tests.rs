@@ -18,5 +18,6 @@ mod sk_storage;
 mod smoke;
 mod strncmp;
 mod tcx;
+mod uprobe;
 mod uprobe_cookie;
 mod xdp;

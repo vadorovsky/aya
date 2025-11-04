@@ -57,6 +57,7 @@ bpf_file!(
     TEST => "test",
     TWO_PROGS => "two_progs",
     XDP_SEC => "xdp_sec",
+    UPROBE => "uprobe",
     UPROBE_COOKIE => "uprobe_cookie",
 );
 

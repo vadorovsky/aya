@@ -101,5 +101,9 @@ name = "xdp_sec"
 path = "src/xdp_sec.rs"
 
 [[bin]]
+name = "uprobe"
+path = "src/uprobe.rs"
+
+[[bin]]
 name = "uprobe_cookie"
 path = "src/uprobe_cookie.rs"
