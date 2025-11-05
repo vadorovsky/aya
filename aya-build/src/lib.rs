@@ -40,6 +40,10 @@ pub fn build_ebpf<'a>(
     packages: impl IntoIterator<Item = Package<'a>>,
     toolchain: Toolchain<'a>,
 ) -> Result<()> {
+    if env::var_os("AYA_BUILD_SKIP").is_some() {
+        return Ok(());
+    }
+
     let out_dir = env::var_os("OUT_DIR").ok_or(anyhow!("OUT_DIR not set"))?;
     let out_dir = PathBuf::from(out_dir);
 
