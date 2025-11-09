@@ -510,9 +510,7 @@ impl Btf {
             match t {
                 // Fixup PTR for Rust.
                 //
-                // LLVM emits names for Rust pointer types, which the kernel doesn't like.
-                // While I figure out if this needs fixing in the Kernel or LLVM, we'll
-                // do a fixup here.
+                // LLVM <21.1.5 emits names for Rust pointer types, which the kernel doesn't like.
                 BtfType::Ptr(ptr) => {
                     ptr.name_offset = 0;
                 }
