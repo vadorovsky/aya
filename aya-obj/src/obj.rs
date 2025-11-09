@@ -1694,7 +1694,7 @@ mod tests {
         ))
         .unwrap();
 
-        let btf = obj.fixup_and_sanitize_btf(&BtfFeatures::default()).unwrap();
+        let btf = obj.sanitize_btf(&BtfFeatures::default()).unwrap();
         assert!(btf.is_none());
     }
 

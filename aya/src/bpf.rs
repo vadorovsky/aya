@@ -445,7 +445,7 @@ impl<'a> EbpfLoader<'a> {
         obj.patch_map_data(globals.clone())?;
 
         let btf_fd = if let Some(features) = &FEATURES.btf() {
-            if let Some(btf) = obj.fixup_and_sanitize_btf(features)? {
+            if let Some(btf) = obj.sanitize_btf(features)? {
                 match load_btf(btf.to_bytes(), *verifier_log_level) {
                     Ok(btf_fd) => Some(Arc::new(btf_fd)),
                     // Only report an error here if the BTF is truly needed, otherwise proceed without.
