@@ -42,6 +42,7 @@ bpf_file!(
     BPF_PROBE_READ => "bpf_probe_read",
     LINEAR_DATA_STRUCTURES => "linear_data_structures",
     LOG => "log",
+    LOG_STR => "log_str",
     MAP_TEST => "map_test",
     MEMMOVE_TEST => "memmove_test",
     NAME_TEST => "name_test",

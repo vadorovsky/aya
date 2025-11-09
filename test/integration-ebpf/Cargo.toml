@@ -41,6 +41,10 @@ name = "log"
 path = "src/log.rs"
 
 [[bin]]
+name = "log_str"
+path = "src/log_str.rs"
+
+[[bin]]
 name = "map_test"
 path = "src/map_test.rs"
 
