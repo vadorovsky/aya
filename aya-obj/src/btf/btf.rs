@@ -696,7 +696,6 @@ impl Btf {
                 // Sanitize FUNC.
                 BtfType::Func(ty) => {
                     let name = self.string_at(ty.name_offset)?;
-                    // Sanitize FUNC.
                     if !features.btf_func {
                         debug!("{kind}: not supported. replacing with TYPEDEF");
                         *t = BtfType::Typedef(Typedef::new(ty.name_offset, ty.btf_type));
