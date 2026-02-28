@@ -4,6 +4,7 @@ use crate::{
     EbpfContext,
     bindings::sk_msg_md,
     helpers::{bpf_msg_pop_data, bpf_msg_push_data},
+    programs::packet::DirectPacketAccess,
 };
 
 pub struct SkMsgContext {
@@ -17,14 +18,6 @@ impl SkMsgContext {
 
     pub fn size(&self) -> u32 {
         unsafe { (*self.msg).size }
-    }
-
-    pub fn data(&self) -> usize {
-        unsafe { (*self.msg).__bindgen_anon_1.data as usize }
-    }
-
-    pub fn data_end(&self) -> usize {
-        unsafe { (*self.msg).__bindgen_anon_2.data_end as usize }
     }
 
     pub fn push_data(&self, start: u32, len: u32, flags: u64) -> Result<(), i64> {
@@ -41,5 +34,15 @@ impl SkMsgContext {
 impl EbpfContext for SkMsgContext {
     fn as_ptr(&self) -> *mut c_void {
         self.msg.cast()
+    }
+}
+
+impl DirectPacketAccess for SkMsgContext {
+    fn data(&self) -> usize {
+        unsafe { (*self.msg).__bindgen_anon_1.data as usize }
+    }
+
+    fn data_end(&self) -> usize {
+        unsafe { (*self.msg).__bindgen_anon_2.data_end as usize }
     }
 }

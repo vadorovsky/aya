@@ -1,6 +1,10 @@
 use aya_ebpf_cty::{c_long, c_void};
 
-use crate::{EbpfContext, bindings::__sk_buff, programs::sk_buff::SkBuff};
+use crate::{
+    EbpfContext,
+    bindings::__sk_buff,
+    programs::{packet::DirectPacketAccess, sk_buff::SkBuff},
+};
 
 pub struct TcContext {
     pub skb: SkBuff,
@@ -15,16 +19,6 @@ impl TcContext {
     #[inline]
     pub fn len(&self) -> u32 {
         self.skb.len()
-    }
-
-    #[inline]
-    pub fn data(&self) -> usize {
-        self.skb.data()
-    }
-
-    #[inline]
-    pub fn data_end(&self) -> usize {
-        self.skb.data_end()
     }
 
     #[inline]
@@ -189,5 +183,17 @@ impl TcContext {
 impl EbpfContext for TcContext {
     fn as_ptr(&self) -> *mut c_void {
         self.skb.as_ptr()
+    }
+}
+
+impl DirectPacketAccess for TcContext {
+    #[inline]
+    fn data(&self) -> usize {
+        self.skb.data()
+    }
+
+    #[inline]
+    fn data_end(&self) -> usize {
+        self.skb.data_end()
     }
 }

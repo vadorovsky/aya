@@ -1,6 +1,6 @@
 use core::ffi::c_void;
 
-use crate::{EbpfContext, bindings::xdp_md};
+use crate::{EbpfContext, bindings::xdp_md, programs::packet::DirectPacketAccess};
 
 pub struct XdpContext {
     pub ctx: *mut xdp_md,
@@ -9,16 +9,6 @@ pub struct XdpContext {
 impl XdpContext {
     pub const fn new(ctx: *mut xdp_md) -> Self {
         Self { ctx }
-    }
-
-    #[inline]
-    pub fn data(&self) -> usize {
-        unsafe { (*self.ctx).data as usize }
-    }
-
-    #[inline]
-    pub fn data_end(&self) -> usize {
-        unsafe { (*self.ctx).data_end as usize }
     }
 
     /// Return the raw address of the [`XdpContext`] metadata.
@@ -49,5 +39,17 @@ impl XdpContext {
 impl EbpfContext for XdpContext {
     fn as_ptr(&self) -> *mut c_void {
         self.ctx.cast()
+    }
+}
+
+impl DirectPacketAccess for XdpContext {
+    #[inline]
+    fn data(&self) -> usize {
+        unsafe { (*self.ctx).data as usize }
+    }
+
+    #[inline]
+    fn data_end(&self) -> usize {
+        unsafe { (*self.ctx).data_end as usize }
     }
 }
