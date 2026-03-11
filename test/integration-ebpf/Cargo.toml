@@ -57,6 +57,10 @@ name = "name_test"
 path = "src/name_test.rs"
 
 [[bin]]
+name = "packet"
+path = "src/packet.rs"
+
+[[bin]]
 name = "pass"
 path = "src/pass.rs"
 
