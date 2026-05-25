@@ -1,0 +1,23 @@
+[package]
+name = "aya-test-runner"
+version = "0.1.0"
+
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true, features = ["std"] }
+ar = { workspace = true }
+cargo_metadata = { workspace = true }
+clap = { workspace = true, features = ["derive", "std"] }
+tar = { workspace = true }
+tempfile = { workspace = true }
+walkdir = { workspace = true }
+xz2 = { workspace = true }

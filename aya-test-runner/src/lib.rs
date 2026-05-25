@@ -1,5 +1,5 @@
-#![allow(clippy::print_stdout, reason = "xtask is a CLI tool")]
-#![allow(clippy::print_stderr, reason = "xtask is a CLI tool")]
+#![allow(clippy::print_stdout, reason = "CLI output aids diagnostics")]
+#![allow(clippy::print_stderr, reason = "CLI output aids diagnostics")]
 #![allow(clippy::use_debug, reason = "debug output aids troubleshooting")]
 
 use std::{
@@ -17,10 +17,12 @@ use std::{
 };
 
 use anyhow::{Context as _, Result, anyhow, bail};
-use cargo_metadata::{Artifact, CompilerMessage, Message, Target};
+use cargo_metadata::{Artifact, CompilerMessage, Message, Metadata, MetadataCommand, Target};
 use clap::Parser;
 use walkdir::WalkDir;
-use xtask::{AYA_BUILD_INTEGRATION_BPF, Errors, libbpf_sys_env};
+
+const AYA_BUILD_INTEGRATION_BPF: &str = "AYA_BUILD_INTEGRATION_BPF";
+const LIBBPF_DIR: &str = "xtask/libbpf";
 
 const GEN_INIT_CPIO_PATCH: &str = include_str!("../patches/gen_init_cpio.c.macos.diff");
 
@@ -53,7 +55,7 @@ enum Environment {
 const INTEGRATION_TEST_PACKAGE: &str = "integration-test";
 
 #[derive(Parser)]
-pub(crate) struct Options {
+pub struct Options {
     #[clap(subcommand)]
     environment: Environment,
 
@@ -66,7 +68,45 @@ pub(crate) struct Options {
     run_args: Vec<OsString>,
 }
 
-pub(crate) fn build<F>(target: Option<&str>, f: F) -> Result<Vec<(String, PathBuf)>>
+pub fn workspace_root() -> Result<PathBuf> {
+    let Metadata { workspace_root, .. } = MetadataCommand::new()
+        .no_deps()
+        .exec()
+        .context("failed to run cargo metadata")?;
+    Ok(workspace_root.into_std_path_buf())
+}
+
+pub fn maybe_init_libbpf_submodule(workspace_root: &Path) -> Result<()> {
+    let libbpf_dir = workspace_root.join(LIBBPF_DIR);
+    if !libbpf_dir.exists() {
+        return Ok(());
+    }
+
+    let mut libbpf_submodule_status = Command::new("git");
+    let output = libbpf_submodule_status
+        .arg("-C")
+        .arg(workspace_root)
+        .arg("submodule")
+        .arg("status")
+        .arg(LIBBPF_DIR)
+        .output()
+        .with_context(|| format!("failed to run {libbpf_submodule_status:?}"))?;
+    let Output { status, .. } = &output;
+    if !status.success() {
+        bail!("{libbpf_submodule_status:?} failed: {output:?}")
+    }
+    let Output { stdout, .. } = output;
+    if !stdout.starts_with(b" ") {
+        exec(Command::new("git").arg("-C").arg(workspace_root).args([
+            "submodule",
+            "update",
+            "--init",
+        ]))?;
+    }
+    Ok(())
+}
+
+fn build<F>(target: Option<&str>, f: F) -> Result<Vec<(String, PathBuf)>>
 where
     F: FnOnce(&mut Command) -> &mut Command,
 {
@@ -119,6 +159,94 @@ where
     }
     Ok(executables)
 }
+
+fn exec(cmd: &mut Command) -> Result<()> {
+    let status = cmd
+        .status()
+        .with_context(|| format!("failed to run {cmd:?}"))?;
+    if status.code() != Some(0) {
+        bail!("{cmd:?} failed: {status:?}")
+    }
+    Ok(())
+}
+
+fn libbpf_sys_env(workspace_root: &Path, cmd: &mut Command) {
+    for name in [
+        "ac_cv_search_argp_parse",
+        "ac_cv_search__obstack_free",
+        "ac_cv_search_gzdirect",
+        "ac_cv_search_fts_close",
+    ] {
+        cmd.env(name, "none required");
+    }
+
+    const CFLAGS: &str = "CFLAGS";
+    cmd.env(CFLAGS, {
+        let headers = workspace_root.join("ci").join("headers");
+        let mut cflags = OsString::new();
+        cflags.push("-I");
+        cflags.push(headers.as_os_str());
+        if let Some(existing) = env::var_os(CFLAGS) {
+            cflags.push(" ");
+            cflags.push(existing);
+        }
+        cflags
+    });
+
+    if cfg!(target_os = "macos") {
+        const PATH: &str = "PATH";
+        cmd.env(PATH, {
+            let mut path = OsString::new();
+            path.push(workspace_root.join("ci").join("bin"));
+            if let Some(existing) = env::var_os(PATH) {
+                path.push(":");
+                path.push(existing);
+            }
+            path
+        });
+
+        for (key, value) in [
+            ("AR_x86_64_unknown_linux_musl", "x86_64-linux-musl-ar"),
+            (
+                "RANLIB_x86_64_unknown_linux_musl",
+                "x86_64-linux-musl-ranlib",
+            ),
+        ] {
+            cmd.env(key, value);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Errors<E>(Vec<E>);
+
+impl<E> Errors<E> {
+    const fn new(errors: Vec<E>) -> Self {
+        Self(errors)
+    }
+}
+
+impl<E> std::fmt::Display for Errors<E>
+where
+    E: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let Self(errors) = self;
+        for (i, error) in errors.iter().enumerate() {
+            if i != 0 {
+                writeln!(f)?;
+            }
+            #[expect(
+                clippy::use_debug,
+                reason = "<anyhow::Error as Display> does not show backtrace"
+            )]
+            write!(f, "{error:?}")?;
+        }
+        Ok(())
+    }
+}
+
+impl<E> std::error::Error for Errors<E> where E: Debug {}
 
 enum Disposition<T> {
     Skip,
@@ -218,7 +346,7 @@ fn one<T: Debug>(slice: &[T]) -> Result<&T> {
 }
 
 /// Build and run the project.
-pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
+pub fn run(opts: Options, workspace_root: &Path) -> Result<()> {
     let Options {
         environment,
         package,
