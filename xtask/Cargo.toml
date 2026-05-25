@@ -15,7 +15,7 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true, features = ["std"] }
-ar = { workspace = true }
+aya-test-runner = { path = "../aya-test-runner", version = "^0.1.0" }
 aya-tool = { path = "../aya-tool", version = "0.1.0", default-features = false }
 cargo_metadata = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
@@ -28,7 +28,4 @@ quote = { workspace = true }
 rustdoc-json = { workspace = true }
 rustup-toolchain = { workspace = true }
 syn = { workspace = true }
-tar = { workspace = true }
 tempfile = { workspace = true }
-walkdir = { workspace = true }
-xz2 = { workspace = true }
