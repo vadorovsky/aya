@@ -17,9 +17,8 @@ use aya::{
     util::KernelVersion,
 };
 use aya_obj::generated::bpf_attach_type::BPF_CGROUP_INET4_CONNECT;
+use aya_test::{Cgroup, NetNsGuard, is_cgroup2};
 use rstest::rstest;
-
-use crate::utils::{Cgroup, NetNsGuard, is_cgroup2};
 
 #[rstest]
 #[case::legacy("STORAGE_LEGACY", "PERCPU_LEGACY", "connect4_legacy")]

@@ -6,8 +6,9 @@ use aya::{
     },
     util::KernelVersion,
 };
+use aya_test::NetNsGuard;
 
-use crate::{TCX, utils::NetNsGuard};
+use crate::TCX;
 
 /// Returns true if the kernel autoloads `cls_bpf` on netlink attach.
 ///

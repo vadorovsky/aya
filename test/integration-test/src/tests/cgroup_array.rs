@@ -7,10 +7,9 @@ use aya::{
     sys::is_map_supported,
     util::KernelVersion,
 };
+use aya_test::{Cgroup, is_cgroup2};
 use integration_common::cgroup_array::{NOT_UNDER_INDEX, TestResult, UNDER_INDEX};
 use rstest::rstest;
-
-use crate::utils::{Cgroup, is_cgroup2};
 
 #[unsafe(no_mangle)]
 #[inline(never)]

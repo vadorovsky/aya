@@ -5,10 +5,9 @@ use aya::{
     programs::{BtfTracePoint, ProgramType},
     sys::{is_map_supported, is_program_supported},
 };
+use aya_test::{Cgroup, is_cgroup2};
 use integration_common::local_storage::SENTINEL;
 use test_log::test;
-
-use crate::utils::{Cgroup, is_cgroup2};
 
 #[test]
 fn cgrp_storage() {

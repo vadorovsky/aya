@@ -5,8 +5,7 @@ use aya::{
     sys::{SyscallError, is_program_supported},
     util::KernelVersion,
 };
-
-use crate::utils::Cgroup;
+use aya_test::Cgroup;
 
 macro_rules! expect_permission_denied {
     ($result:expr) => {

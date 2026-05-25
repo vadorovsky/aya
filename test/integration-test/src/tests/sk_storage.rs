@@ -6,10 +6,9 @@ use aya::{
     maps::{MapError, SkStorage},
     programs::{CgroupAttachMode, CgroupSockAddr},
 };
+use aya_test::{Cgroup, NetNsGuard};
 use integration_common::sk_storage::{Ip, Value};
 use test_log::test;
-
-use crate::utils::{Cgroup, NetNsGuard};
 
 #[test]
 fn sk_storage_connect() {

@@ -3,8 +3,7 @@ use aya::{
     programs::{Extension, TracePoint, Xdp, XdpMode, tc},
     util::KernelVersion,
 };
-
-use crate::utils::NetNsGuard;
+use aya_test::NetNsGuard;
 
 #[test_log::test]
 fn modprobe() {

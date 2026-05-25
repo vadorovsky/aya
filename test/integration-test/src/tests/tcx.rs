@@ -3,8 +3,7 @@ use aya::{
     programs::{LinkOrder, ProgramId, SchedClassifier, TcAttachType, tc::TcAttachOptions},
     util::KernelVersion,
 };
-
-use crate::utils::NetNsGuard;
+use aya_test::NetNsGuard;
 
 #[test_log::test]
 fn tcx() {

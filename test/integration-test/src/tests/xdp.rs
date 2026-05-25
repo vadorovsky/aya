@@ -7,11 +7,10 @@ use aya::{
     programs::{ProgramError, Xdp, XdpError, XdpMode, xdp::XdpLinkId},
     util::KernelVersion,
 };
+use aya_test::NetNsGuard;
 use object::{Object as _, ObjectSection as _, ObjectSymbol as _, SymbolSection};
 use rstest::rstest;
 use xdpilone::{BufIdx, IfInfo, Socket, SocketConfig, Umem, UmemConfig};
-
-use crate::utils::NetNsGuard;
 
 #[rstest]
 #[case::legacy("SOCKS", "redirect_sock")]

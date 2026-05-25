@@ -12,6 +12,7 @@ use aya::{
     programs::{ProgramError, SkReuseport, SkReuseportError},
     util::KernelVersion,
 };
+use aya_test::NetNsGuard;
 use futures::future::select_all;
 use integration_common::sk_reuseport::{
     CLEAR_FALLBACK_HITS_INDEX, MIGRATE_HITS_INDEX, MIGRATE_SOCKET_INDEX, SELECT_HITS_INDEX,
@@ -24,8 +25,6 @@ use tokio::{
     net::{TcpListener as TokioTcpListener, TcpSocket, TcpStream as TokioTcpStream},
     time::{sleep, timeout},
 };
-
-use crate::utils::NetNsGuard;
 
 const RETRY_DURATION: Duration = Duration::from_millis(10);
 const ACCEPT_TIMEOUT: Duration = Duration::from_secs(10);

@@ -1,4 +1,4 @@
-//! Utilities to run tests
+//! Test support utilities for Aya integration tests.
 
 use std::{
     borrow::Cow,
@@ -19,24 +19,25 @@ use libc::if_nametoindex;
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 const CGROUP_PROCS: &str = "cgroup.procs";
 
-pub(crate) fn is_cgroup2() -> bool {
+/// Returns whether `/sys/fs/cgroup` is the root of a cgroup v2 mount.
+pub fn is_cgroup2() -> bool {
     // `cgroup.controllers` exists only at the root of a cgroup2 mount.
     Path::new(CGROUP_ROOT).join("cgroup.controllers").exists()
 }
 
-pub(crate) struct ChildCgroup<'a> {
+pub struct ChildCgroup<'a> {
     parent: &'a Cgroup<'a>,
     path: Cow<'a, Path>,
     fd: OnceCell<fs::File>,
 }
 
-pub(crate) enum Cgroup<'a> {
+pub enum Cgroup<'a> {
     Root,
     Child(ChildCgroup<'a>),
 }
 
 impl Cgroup<'static> {
-    pub(crate) fn root() -> Self {
+    pub const fn root() -> Self {
         Self::Root
     }
 }
@@ -53,7 +54,7 @@ impl<'a> Cgroup<'a> {
         }
     }
 
-    pub(crate) fn create_child(&'a self, name: &str) -> ChildCgroup<'a> {
+    pub fn create_child(&'a self, name: &str) -> ChildCgroup<'a> {
         let path = self.path().join(name);
         fs::create_dir(&path).unwrap();
 
@@ -64,13 +65,13 @@ impl<'a> Cgroup<'a> {
         }
     }
 
-    pub(crate) fn write_pid(&self, pid: u32) {
+    pub fn write_pid(&self, pid: u32) {
         fs::write(self.path().join(CGROUP_PROCS), format!("{pid}\n")).unwrap();
     }
 }
 
 impl<'a> ChildCgroup<'a> {
-    pub(crate) fn fd(&self) -> &fs::File {
+    pub fn fd(&self) -> &fs::File {
         let Self {
             parent: _,
             path,
@@ -84,7 +85,7 @@ impl<'a> ChildCgroup<'a> {
         })
     }
 
-    pub(crate) fn into_cgroup(self) -> Cgroup<'a> {
+    pub fn into_cgroup(self) -> Cgroup<'a> {
         Cgroup::Child(self)
     }
 }
@@ -124,7 +125,7 @@ impl Drop for ChildCgroup<'_> {
                     .with_context(|| format!("dst.write_all(\"{pid}\")"))?;
             }
 
-            fs::remove_dir(&path)
+            fs::remove_dir(path.as_ref())
                 .with_context(|| format!("fs::remove_dir(\"{}\")", path.display()))?;
             Ok(())
         })() {
@@ -141,7 +142,7 @@ impl Drop for ChildCgroup<'_> {
     }
 }
 
-pub(crate) struct NetNsGuard {
+pub struct NetNsGuard {
     name: String,
     old_ns: fs::File,
     new_ns: fs::File,
@@ -155,7 +156,7 @@ impl NetNsGuard {
         clippy::print_stdout,
         reason = "integration tests print namespace transitions for diagnostics"
     )]
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         // `/proc/thread-self/ns/net` resolves to the calling thread's netns
         // (`/proc/self/ns/net` would always pin to the main thread's).
         let old_ns = fs::File::open(Self::THREAD_NETNS)
@@ -212,6 +213,12 @@ impl NetNsGuard {
     }
 }
 
+impl Default for NetNsGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AsFd for NetNsGuard {
     fn as_fd(&self) -> BorrowedFd<'_> {
         self.new_ns.as_fd()
@@ -236,7 +243,7 @@ impl Drop for NetNsGuard {
         match (|| -> Result<()> {
             nix::sched::setns(old_ns, nix::sched::CloneFlags::CLONE_NEWNET)
                 .context("nix::sched::setns(_, CLONE_NEWNET)")?;
-            let ns_path = Path::new(Self::PERSIST_DIR).join(&name);
+            let ns_path = Path::new(Self::PERSIST_DIR).join(name);
             nix::mount::umount2(&ns_path, nix::mount::MntFlags::MNT_DETACH).with_context(|| {
                 format!("nix::mount::umount2(\"{}\", MNT_DETACH)", ns_path.display())
             })?;
@@ -257,7 +264,9 @@ impl Drop for NetNsGuard {
     }
 }
 
-/// If the `KernelVersion::current >= $version`, `assert!($cond)`, else `assert!(!$cond)`.
+/// If the current kernel version is at least `$version`, assert `$cond`; otherwise assert
+/// `!$cond`.
+#[macro_export]
 macro_rules! kernel_assert {
     ($cond:expr, $version:expr $(,)?) => {
         let current = aya::util::KernelVersion::current().unwrap();
@@ -270,10 +279,9 @@ macro_rules! kernel_assert {
     };
 }
 
-pub(crate) use kernel_assert;
-
-/// If the `KernelVersion::current >= $version`, `assert_eq!($left, $right)`, else
-/// `assert_ne!($left, $right)`.
+/// If the current kernel version is at least `$version`, assert equality; otherwise assert
+/// inequality.
+#[macro_export]
 macro_rules! kernel_assert_eq {
     ($left:expr, $right:expr, $version:expr $(,)?) => {
         let current = aya::util::KernelVersion::current().unwrap();
@@ -285,5 +293,3 @@ macro_rules! kernel_assert_eq {
         }
     };
 }
-
-pub(crate) use kernel_assert_eq;

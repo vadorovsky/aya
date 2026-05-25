@@ -12,6 +12,7 @@ use aya::{
     sys::is_program_supported,
     util::KernelVersion,
 };
+use aya_test::NetNsGuard;
 use integration_common::socket_filter::{
     PASS_HITS_INDEX, REUSEPORT_FIRST_LISTENER_INDEX, REUSEPORT_SECOND_LISTENER_INDEX,
     REUSEPORT_SELECT_FIRST_HITS_INDEX, REUSEPORT_SELECT_SECOND_HITS_INDEX, TRIM_DELTA_BYTES,
@@ -22,8 +23,6 @@ use tokio::{
     net::{TcpListener, TcpSocket, TcpStream, UnixDatagram},
     time::timeout,
 };
-
-use crate::utils::NetNsGuard;
 
 const IO_TIMEOUT: Duration = Duration::from_secs(10);
 const ACCEPT_TIMEOUT: Duration = Duration::from_secs(10);

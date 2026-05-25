@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "aya-test",
     "aya",
     "aya-build",
     "aya-log",
@@ -29,6 +30,7 @@ members = [
 resolver = "2"
 
 default-members = [
+    "aya-test",
     "aya",
     "aya-build",
     "aya-log",
