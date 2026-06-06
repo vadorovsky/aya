@@ -17,3 +17,4 @@ anyhow = { workspace = true, features = ["std"] }
 aya = { path = "../aya", version = "^0.13.2", default-features = false }
 libc = { workspace = true }
 nix = { workspace = true, features = ["mount", "sched"] }
+thiserror = { workspace = true }

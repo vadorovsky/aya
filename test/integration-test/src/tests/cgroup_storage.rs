@@ -49,10 +49,15 @@ fn cgroup_storage(#[case] storage_map: &str, #[case] percpu_map: &str, #[case] p
         .load(crate::CGROUP_STORAGE)
         .expect("load cgroup_storage program");
 
-    let _netns = NetNsGuard::new();
+    let _netns = NetNsGuard::new().expect("NetNsGuard::new");
     let root = Cgroup::root();
-    let cgroup = root.create_child(prog);
-    let cgroup_inode_id = cgroup.fd().metadata().expect("cgroup metadata").ino();
+    let cgroup = root.create_child(prog).expect("create_child");
+    let cgroup_inode_id = cgroup
+        .fd()
+        .expect("cgroup fd")
+        .metadata()
+        .expect("cgroup metadata")
+        .ino();
 
     {
         let program: &mut CgroupSockAddr = bpf
@@ -64,12 +69,12 @@ fn cgroup_storage(#[case] storage_map: &str, #[case] percpu_map: &str, #[case] p
             .load()
             .unwrap_or_else(|err| panic!("load {prog}: {err}"));
         program
-            .attach(cgroup.fd(), CgroupAttachMode::Single)
+            .attach(cgroup.fd().expect("cgroup fd"), CgroupAttachMode::Single)
             .unwrap_or_else(|err| panic!("attach {prog}: {err}"));
     }
 
     let cgroup = cgroup.into_cgroup();
-    cgroup.write_pid(process::id());
+    cgroup.write_pid(process::id()).expect("write_pid");
 
     // A single connect over loopback fires the connect4 program exactly once.
     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();

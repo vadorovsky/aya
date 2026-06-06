@@ -12,12 +12,69 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use anyhow::{Context as _, Result};
 use aya::netlink_set_link_up;
 use libc::if_nametoindex;
 
 const CGROUP_ROOT: &str = "/sys/fs/cgroup";
 const CGROUP_PROCS: &str = "cgroup.procs";
+
+#[derive(Debug, thiserror::Error)]
+pub enum AyaTestError<'a> {
+    #[error("failed to create a child cgroup directory: {}: {source}")]
+    CreateChildDir {
+        path: &'a Path,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to write PID {pid} to {path}: {source}")]
+    WritePid {
+        pid: u32,
+        cgroup_procs: &'a Path,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to open a child cgroup {path}: {source}")]
+    OpenChild {
+        path: &'a Path,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to open a network namespace {path}: {source}")]
+    OpenNetns {
+        path: &'a str,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to create a directory for persistent network namespaces {path}: {source}")]
+    CreatePersistNetnsDir {
+        path: &'a str,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to create a network namespace {path}: {source}")]
+    CreateNetns {
+        path: &'a Path,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to enter a network namespace: {0}")]
+    EnterNetns(#[source] io::Error),
+    #[error("failed to bind mount a network namespace {path}: {source}")]
+    BindMountNetns {
+        source_path: &'a str,
+        target_path: &'a Path,
+        #[source]
+        source: io::Error,
+    },
+    #[error("failed to set up the link {idx}: {source}")]
+    SetupLink {
+        idx: u32,
+        #[source]
+        source: NetlinkError,
+    },
+}
+
+pub type Result<T> = Result<T, AyaTestError<'_>>;
 
 /// Returns whether `/sys/fs/cgroup` is the root of a cgroup v2 mount.
 pub fn is_cgroup2() -> bool {
@@ -54,24 +111,34 @@ impl<'a> Cgroup<'a> {
         }
     }
 
-    pub fn create_child(&'a self, name: &str) -> ChildCgroup<'a> {
+    pub fn create_child(&'a self, name: &str) -> Result<ChildCgroup<'a>> {
         let path = self.path().join(name);
-        fs::create_dir(&path).unwrap();
+        fs::create_dir(&path)?;
 
-        ChildCgroup {
+        let fd = fs::OpenOptions::new()
+            .read(true)
+            .open(&path)
+            .map_err(|source| AyaTestError::CreateChildDir { path, source })?;
+
+        Ok(ChildCgroup {
             parent: self,
             path: path.into(),
-            fd: OnceCell::new(),
-        }
+            fd: OnceCell::from(fd),
+        })
     }
 
-    pub fn write_pid(&self, pid: u32) {
-        fs::write(self.path().join(CGROUP_PROCS), format!("{pid}\n")).unwrap();
+    pub fn write_pid(&self, pid: u32) -> Result<()> {
+        let cgroup_procs = self.path().join(CGROUP_PROCS);
+        fs::write(cgroup_procs, format!("{pid}\n")).map_err(|source| AyaTestError::WritePid {
+            pid,
+            cgroup_procs,
+            source,
+        })
     }
 }
 
 impl<'a> ChildCgroup<'a> {
-    pub fn fd(&self) -> &fs::File {
+    pub fn fd(&self) -> Result<&'a fs::File> {
         let Self {
             parent: _,
             path,
@@ -81,7 +148,7 @@ impl<'a> ChildCgroup<'a> {
             fs::OpenOptions::new()
                 .read(true)
                 .open(path.as_ref())
-                .unwrap()
+                .map_err(|source| AyaTestError::OpenChild { path, source })
         })
     }
 
@@ -156,27 +223,40 @@ impl NetNsGuard {
         clippy::print_stdout,
         reason = "integration tests print namespace transitions for diagnostics"
     )]
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self> {
         // `/proc/thread-self/ns/net` resolves to the calling thread's netns
         // (`/proc/self/ns/net` would always pin to the main thread's).
-        let old_ns = fs::File::open(Self::THREAD_NETNS)
-            .unwrap_or_else(|err| panic!("fs::File::open(\"{}\"): {err:?}", Self::THREAD_NETNS));
+        let old_ns =
+            fs::File::open(Self::THREAD_NETNS).map_err(|source| AyaTestError::OpenNetns {
+                path: Self::THREAD_NETNS,
+                source,
+            })?;
 
         static COUNTER: AtomicU64 = AtomicU64::new(0);
         let pid = process::id();
         let name = format!("aya-test-{pid}-{}", COUNTER.fetch_add(1, Ordering::Relaxed));
 
         fs::create_dir_all(Self::PERSIST_DIR)
-            .unwrap_or_else(|err| panic!("fs::create_dir_all(\"{}\"): {err:?}", Self::PERSIST_DIR));
+            .map_err(|source| AyaTestError::CreatePersistNetnsDir {
+                path: Self::PERSIST_DIR,
+                source,
+            })
+            .with_context(|| format!("fs::create_dir_all(\"{}\")", Self::PERSIST_DIR))?;
         let ns_path = Path::new(Self::PERSIST_DIR).join(&name);
-        let _unused: fs::File = fs::File::create(&ns_path)
-            .unwrap_or_else(|err| panic!("fs::File::create(\"{}\"): {err:?}", ns_path.display()));
+        let _unused: fs::File =
+            fs::File::create(&ns_path).map_err(|source| AyaTestError::CreateNetns {
+                path: ns_path,
+                source,
+            })?;
         nix::sched::unshare(nix::sched::CloneFlags::CLONE_NEWNET)
-            .expect("nix::sched::unshare(CLONE_NEWNET)");
+            .map_err(|source| AyaTestError::EnterNetns(source))?;
 
         // Re-open after unshare to capture the freshly entered namespace.
-        let new_ns = fs::File::open(Self::THREAD_NETNS)
-            .unwrap_or_else(|err| panic!("fs::File::open(\"{}\"): {err:?}", Self::THREAD_NETNS));
+        let new_ns =
+            fs::File::open(Self::THREAD_NETNS).map_err(|source| AyaTestError::OpenNetns {
+                path: Self::THREAD_NETNS,
+                source,
+            })?;
 
         nix::mount::mount(
             Some(Self::THREAD_NETNS),
@@ -185,7 +265,11 @@ impl NetNsGuard {
             nix::mount::MsFlags::MS_BIND,
             None::<&str>,
         )
-        .expect("nix::mount::mount");
+        .map_err(|source| AyaTestError::BindMountNetns {
+            source_path: Self::THREAD_NETNS,
+            target_path: ns_path,
+            source,
+        })?;
 
         println!("entered network namespace {name}");
 
@@ -196,7 +280,7 @@ impl NetNsGuard {
         };
 
         // By default, the loopback in a new netns is down. Set it up.
-        let lo = CString::new("lo").unwrap();
+        let lo = c"lo";
         unsafe {
             let idx = if_nametoindex(lo.as_ptr());
             assert!(
@@ -206,16 +290,16 @@ impl NetNsGuard {
                 io::Error::last_os_error()
             );
             netlink_set_link_up(idx as i32)
-                .unwrap_or_else(|e| panic!("failed to set `lo` up in netns {}: {e}", ns.name));
+                .map_err(|source| AyaTestError::SetupLink { idx, source })?;
         }
 
-        ns
+        Ok(ns)
     }
 }
 
 impl Default for NetNsGuard {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("NetNsGuard::new")
     }
 }
 

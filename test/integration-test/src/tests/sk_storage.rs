@@ -17,10 +17,12 @@ fn sk_storage_connect() {
     let storage = ebpf.take_map("SOCKET_STORAGE").unwrap();
     let mut storage = SkStorage::<_, Value>::try_from(storage).unwrap();
 
-    let _netns = NetNsGuard::new();
+    let _netns = NetNsGuard::new().expect("NetNsGuard::new");
     let root_cgroup = Cgroup::root();
-    let cgroup = root_cgroup.create_child("aya-test-sk-storage");
-    let cgroup_fd = cgroup.fd();
+    let cgroup = root_cgroup
+        .create_child("aya-test-sk-storage")
+        .expect("create_child");
+    let cgroup_fd = cgroup.fd().expect("cgroup fd");
 
     let guards = ebpf
         .programs_mut()
@@ -37,7 +39,7 @@ fn sk_storage_connect() {
         .collect::<Vec<_>>();
 
     let cgroup = cgroup.into_cgroup();
-    cgroup.write_pid(std::process::id());
+    cgroup.write_pid(std::process::id()).expect("write_pid");
 
     let listener4 = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
     let addr4 = listener4.local_addr().unwrap();
