@@ -1,5 +1,5 @@
-mod aya;
 mod aya_ebpf_bindings;
+mod aya_obj;
 mod helpers;
 
 use std::path::{Path, PathBuf};
@@ -134,8 +134,8 @@ pub(crate) struct Options {
 
 #[derive(clap::Subcommand)]
 enum Target {
-    #[command(name = "aya")]
-    Aya,
+    #[command(name = "aya-obj")]
+    AyaObj,
     #[command(name = "aya-ebpf-bindings")]
     AyaEbpfBindings,
 }
@@ -148,12 +148,12 @@ pub(crate) fn codegen(opts: Options, libbpf_dir: &Path) -> Result<()> {
 
     if let Some(command) = command {
         match command {
-            Target::Aya => aya::codegen(&sysroot_options, libbpf_dir).context("aya"),
+            Target::AyaObj => aya_obj::codegen(&sysroot_options, libbpf_dir).context("aya"),
             Target::AyaEbpfBindings => aya_ebpf_bindings::codegen(&sysroot_options, libbpf_dir)
                 .context("aya_ebpf_bindings"),
         }
     } else {
-        aya::codegen(&sysroot_options, libbpf_dir).context("aya")?;
+        aya_obj::codegen(&sysroot_options, libbpf_dir).context("aya")?;
         aya_ebpf_bindings::codegen(&sysroot_options, libbpf_dir).context("aya_ebpf_bindings")?;
         Ok(())
     }
