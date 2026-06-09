@@ -1,4 +1,5 @@
 mod aya_ebpf_bindings;
+mod aya_netlink;
 mod aya_obj;
 mod helpers;
 
