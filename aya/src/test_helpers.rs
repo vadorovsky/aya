@@ -145,7 +145,7 @@ pub enum Cgroup<'a> {
 
 impl Cgroup<'static> {
     /// Returns a handle to the root cgroup.
-    pub fn root() -> Self {
+    pub const fn root() -> Self {
         Self::Root
     }
 }
@@ -204,7 +204,7 @@ impl<'a> ChildCgroup<'a> {
     }
 
     /// Consumes `self` and returns a [`Cgroup::Child`] variant.
-    pub fn into_cgroup(self) -> Cgroup<'a> {
+    pub const fn into_cgroup(self) -> Cgroup<'a> {
         Cgroup::Child(self)
     }
 }
