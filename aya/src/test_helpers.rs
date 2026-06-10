@@ -224,6 +224,7 @@ impl Drop for ChildCgroup<'_> {
         clippy::use_debug,
         reason = "debug formatting preserves error context in drop"
     )]
+    #[expect(clippy::panic, reason = "drop handlers can't return a result")]
     fn drop(&mut self) {
         use anyhow::{Context as _, Result};
 
@@ -390,6 +391,7 @@ impl Drop for NetNsGuard {
         clippy::use_debug,
         reason = "debug formatting preserves error context in drop"
     )]
+    #[expect(clippy::panic, reason = "drop handlers can't return a result")]
     fn drop(&mut self) {
         use anyhow::{Context as _, Result};
 
