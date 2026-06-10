@@ -38,7 +38,6 @@
 )]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![deny(missing_docs)]
-#![cfg_attr(test, expect(unused_crate_dependencies, reason = "used in doctests"))]
 
 mod bpf;
 pub mod maps;
