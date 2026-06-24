@@ -7,7 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.2.0 (2026-06-24)
+
+### New Features
+
+ - <csr-id-c1eb42780c8e0eba340808eb4b75df15ac434e61/> add typos-cli configuration and CI
+ - <csr-id-a98b638fa95fd8edb8c015ee03154d2f03ecffc8/> add support for logging raw pointer types
+   * Requires the usage of `:p` display hint.
+   * Will, like stdlib, log with `0x` prefix.
+
+### Other
+
+ - <csr-id-353b83383dccc430619f3c6d95e17edd6ca8a96c/> zero copy!
+ - <csr-id-aa47acc5074ac1507a72ea14d1172d6ed6d59294/> allow macros in expr position
+   This is load-bearing in aya-template.
+ - <csr-id-9be2d723ce5d7bf5f85d69d54aa5fd7f60d48edc/> Replace AsyncPerfEventArray with RingBuf
+   This doesn't get us to zero copy because the reserve/submit APIs do not
+   support DSTs for reasons I don't remember.
+   
+   Now that it is unused in userspace, move `LOG_BUF_CAPACITY` to
+   `aya-log-ebpf` by making its type `LogValueLength` which obviates the
+   need for `log_value_length_sufficient`.
+ - <csr-id-8fb19264da203ae3b6089b1b09b7cee13d235b09/> tidy up `macro_support`
+   Move top level items into and remove unused items from `macro_support`.
+ - <csr-id-600927d6fcb671081b9bbfe19eea8c36ee8cc96c/> use destructuring
+ - <csr-id-49a828ec5655f6ecd0c38083c6c0dca217bad777/> reorder-keys
+   Group non-workspace keys before workspace ones for readability.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 15 commits contributed to the release.
+ - 8 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 0 issues like '(#ID)' were seen in commit messages
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **Uncategorized**
+    - Add typos-cli configuration and CI ([`c1eb427`](https://github.com/vadorovsky/aya/commit/c1eb42780c8e0eba340808eb4b75df15ac434e61))
+    - Dial the lints to 100 ([`2f8759c`](https://github.com/vadorovsky/aya/commit/2f8759cc62e2a420eef463e271d354fcf65eca9d))
+    - Release crates ([`d238b2e`](https://github.com/vadorovsky/aya/commit/d238b2ea6f1b2c1aa09a9050415b1c96329af0aa))
+    - Add support for logging raw pointer types ([`a98b638`](https://github.com/vadorovsky/aya/commit/a98b638fa95fd8edb8c015ee03154d2f03ecffc8))
+    - Lint all crates; enable strict pointer lints ([`5f5305c`](https://github.com/vadorovsky/aya/commit/5f5305c2a8ca0a739219093599dd57182d440ac1))
+    - Zero copy! ([`353b833`](https://github.com/vadorovsky/aya/commit/353b83383dccc430619f3c6d95e17edd6ca8a96c))
+    - Allow macros in expr position ([`aa47acc`](https://github.com/vadorovsky/aya/commit/aa47acc5074ac1507a72ea14d1172d6ed6d59294))
+    - Implement load-time log level mask ([`b36cbc3`](https://github.com/vadorovsky/aya/commit/b36cbc3eb8413d4fba4f2d820fec8176751457ac))
+    - Replace AsyncPerfEventArray with RingBuf ([`9be2d72`](https://github.com/vadorovsky/aya/commit/9be2d723ce5d7bf5f85d69d54aa5fd7f60d48edc))
+    - Tidy up `macro_support` ([`8fb1926`](https://github.com/vadorovsky/aya/commit/8fb19264da203ae3b6089b1b09b7cee13d235b09))
+    - Use destructuring ([`600927d`](https://github.com/vadorovsky/aya/commit/600927d6fcb671081b9bbfe19eea8c36ee8cc96c))
+    - Avoid shadowing `buf` ([`90c2165`](https://github.com/vadorovsky/aya/commit/90c2165231e06c82218163247820ebf3dbaae2d8))
+    - Reorder-keys ([`49a828e`](https://github.com/vadorovsky/aya/commit/49a828ec5655f6ecd0c38083c6c0dca217bad777))
+    - Introduce workspace lints, warn on unused crates ([`a43e40a`](https://github.com/vadorovsky/aya/commit/a43e40ae1d1441ab4aea6a1a5d9ea36b56d62ff8))
+    - Bump edition to 2024 ([`f0a9f19`](https://github.com/vadorovsky/aya/commit/f0a9f19ddc7f02143a02dcc2bf6be88fa2d84063))
+</details>
+
 ## v0.1.1 (2025-11-17)
+
+<csr-id-9be2d723ce5d7bf5f85d69d54aa5fd7f60d48edc/>
+<csr-id-600927d6bb802fbaaddea8b54708c386b15fd88e/>
+<csr-id-8fb19264638c7d02c4e83d315c0c4824dc1e27e1/>
 
 ### Breaking Changes
 
@@ -41,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-2223ab828d6db40a85cff4737f6164ed8ee9e42d/>
 <csr-id-9a8409e3a24179f4f60e6587b70e2ecd12322973/>
 <csr-id-83ec27f06b6859f455f2b2baf985b8fd3fb4adc5/>
+<csr-id-1d515fe810c6e646ca405d8f97803698deda148c/>
 
 ### Chore
 
@@ -169,7 +233,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 35 commits contributed to the release over the course of 623 calendar days.
+ - 36 commits contributed to the release.
  - 17 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
 
@@ -180,40 +244,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
-    - Release aya-log-parser v0.1.13 ([`04ee35d`](https://github.com/aya-rs/aya/commit/04ee35d1392ab7dc2d97c6e0f1449e98b1283ffe))
-    - Add missing changelogs ([`1d515fe`](https://github.com/aya-rs/aya/commit/1d515fe810c6e646ca405d8f97803698deda148c))
-    - Release aya-log-common v0.1.14, aya-log v0.2.0 ([`c22a696`](https://github.com/aya-rs/aya/commit/c22a6963d44befb5591d4b21c09767c43935cb54))
-    - Don't use path deps in workspace ([`13b1fc6`](https://github.com/aya-rs/aya/commit/13b1fc63ef2ae083ba03ce9de24cb4f31f989d21))
-    - Merge pull request #882 from dave-tucker/metadata ([`0fadd69`](https://github.com/aya-rs/aya/commit/0fadd695377b8a3f0d9a3af3bc8140f0f1bed8d2))
-    - Use the cargo workspace package table ([`b3e7ef7`](https://github.com/aya-rs/aya/commit/b3e7ef741c5b8d09fc7dc8302576f8174be75ff4))
-    - Fix hygiene ([`2227223`](https://github.com/aya-rs/aya/commit/2227223a96b0016ec960a8d5ba354d8c889ecc68))
-    - Merge pull request #797 from aya-rs/rustfmt-group-imports ([`373fb7b`](https://github.com/aya-rs/aya/commit/373fb7bf06ba80ee4c120d8c112f5e810204c472))
-    - Group_imports = "StdExternalCrate" ([`d16e607`](https://github.com/aya-rs/aya/commit/d16e607fd4b6258b516913071fdacafeb2bbbff9))
-    - Merge pull request #735 from aya-rs/log-option-not-result ([`ecf0dd9`](https://github.com/aya-rs/aya/commit/ecf0dd973985bd442978b202d0fd6f75647cdda3))
-    - S/Result<usize, ()>/Option<NonZeroUsize>/ ([`ca3f70b`](https://github.com/aya-rs/aya/commit/ca3f70b16a705bf26d2ccc7ce754de403be36223))
-    - Merge pull request #683 from aya-rs/logs-wtf ([`5ebaf5f`](https://github.com/aya-rs/aya/commit/5ebaf5f39369289fbf4f6292dde2d697d45d3111))
-    - Refactor log macro for readability ([`b3db916`](https://github.com/aya-rs/aya/commit/b3db9161eb304a4b83aa6122ebfc3d81fd4cd995))
-    - Merge pull request #667 from vadorovsky/workspace-dependencies ([`f554d42`](https://github.com/aya-rs/aya/commit/f554d421053bc34266afbf8e00b28705ab4b41d2))
-    - Define dependencies on the workspace level ([`96fa08b`](https://github.com/aya-rs/aya/commit/96fa08bd82233268154edf30b106876f5a4f0e30))
-    - Merge pull request #611 from probulate/check-refs-not-values ([`3f1a469`](https://github.com/aya-rs/aya/commit/3f1a469f068a0af9bdb137796504a72163fb41cf))
-    - Simplify argument validation ([`6feebef`](https://github.com/aya-rs/aya/commit/6feebef9e551256156a8c22cf5de2165846a4793))
-    - Avoid requiring Copy ([`de79724`](https://github.com/aya-rs/aya/commit/de7972483b5b97c073b337568328a022378ebca9))
-    - Fix compile errors ([`47a2f25`](https://github.com/aya-rs/aya/commit/47a2f25fca21e65d981b716d68f87af6203093d9))
-    - Unify IP format hints into one, repsesent it by `:i` token ([`84e5e28`](https://github.com/aya-rs/aya/commit/84e5e2894f226f4b2c7cb637a6f44d5773b927e6))
-    - Merge pull request #606 from Hanaasagi/check-format-in-log ([`58f1ecb`](https://github.com/aya-rs/aya/commit/58f1ecbf0089194d729327692adca6391fc24932))
-    - Check format and value type in proc macro ([`0970300`](https://github.com/aya-rs/aya/commit/0970300d1f5659622fa55a18dd7681c608d75b0f))
-    - Merge pull request #585 from probulate/tag-len-value ([`5165bf2`](https://github.com/aya-rs/aya/commit/5165bf2f99cdc228122bdab505c2059723e95a9f))
-    - Ensure WriteToBuf is used ([`4d098ef`](https://github.com/aya-rs/aya/commit/4d098ef413dee3fe1cd260f19f7f90e69a06f06c))
-    - Merge pull request #550 from aya-rs/dependabot/cargo/syn-2.0 ([`3ad3cb9`](https://github.com/aya-rs/aya/commit/3ad3cb9ed83f211bee2bfb68a2520f75b123d338))
-    - Update syn requirement from 1.0 to 2.0 ([`45072c0`](https://github.com/aya-rs/aya/commit/45072c078903a062f6aba4ed1562e0df091ee90e))
-    - Merge pull request #456 from dmitris/uninlined_format_args ([`16b029e`](https://github.com/aya-rs/aya/commit/16b029ed3708470afd2a6d67615b30c8d30b5059))
-    - Fix uninlined_format_args clippy issues ([`055d94f`](https://github.com/aya-rs/aya/commit/055d94f58be4f80ada416b99278a22f600c71285))
-    - Merge pull request #436 from vadorovsky/aya-log-mac-addr ([`3adb9b0`](https://github.com/aya-rs/aya/commit/3adb9b049f493ec9b80fcf868a8eac3363d17844))
-    - Add format hints for MAC addresses ([`2223ab8`](https://github.com/aya-rs/aya/commit/2223ab828d6db40a85cff4737f6164ed8ee9e42d))
-    - Fix the DisplayHint expression names ([`9a8409e`](https://github.com/aya-rs/aya/commit/9a8409e3a24179f4f60e6587b70e2ecd12322973))
-    - Add display hints ([`83ec27f`](https://github.com/aya-rs/aya/commit/83ec27f06b6859f455f2b2baf985b8fd3fb4adc5))
-    - Change from Rust edition 2018 to 2021 ([`944d6b8`](https://github.com/aya-rs/aya/commit/944d6b8a1647df36c17cd060b15c37ac9615f4a7))
-    - Merge pull request #350 from dave-tucker/monorepo ([`f37a514`](https://github.com/aya-rs/aya/commit/f37a51433ff5283205ba5d1e74cdc75fbdeea160))
-    - Re-organize into a single workspace ([`dc31e11`](https://github.com/aya-rs/aya/commit/dc31e11691bbb8ae916da9da873fdc37ff261c27))
+    - Release aya-log-ebpf-macros v0.1.0 ([`2eac95f`](https://github.com/vadorovsky/aya/commit/2eac95f6d9075053fbabc67b92b7aa66008b057e))
+    - Release aya-log-parser v0.1.13 ([`04ee35d`](https://github.com/vadorovsky/aya/commit/04ee35d1392ab7dc2d97c6e0f1449e98b1283ffe))
+    - Add missing changelogs ([`1d515fe`](https://github.com/vadorovsky/aya/commit/1d515fe810c6e646ca405d8f97803698deda148c))
+    - Release aya-log-common v0.1.14, aya-log v0.2.0 ([`c22a696`](https://github.com/vadorovsky/aya/commit/c22a6963d44befb5591d4b21c09767c43935cb54))
+    - Don't use path deps in workspace ([`13b1fc6`](https://github.com/vadorovsky/aya/commit/13b1fc63ef2ae083ba03ce9de24cb4f31f989d21))
+    - Merge pull request #882 from dave-tucker/metadata ([`0fadd69`](https://github.com/vadorovsky/aya/commit/0fadd695377b8a3f0d9a3af3bc8140f0f1bed8d2))
+    - Use the cargo workspace package table ([`b3e7ef7`](https://github.com/vadorovsky/aya/commit/b3e7ef741c5b8d09fc7dc8302576f8174be75ff4))
+    - Fix hygiene ([`2227223`](https://github.com/vadorovsky/aya/commit/2227223a96b0016ec960a8d5ba354d8c889ecc68))
+    - Merge pull request #797 from aya-rs/rustfmt-group-imports ([`373fb7b`](https://github.com/vadorovsky/aya/commit/373fb7bf06ba80ee4c120d8c112f5e810204c472))
+    - Group_imports = "StdExternalCrate" ([`d16e607`](https://github.com/vadorovsky/aya/commit/d16e607fd4b6258b516913071fdacafeb2bbbff9))
+    - Merge pull request #735 from aya-rs/log-option-not-result ([`ecf0dd9`](https://github.com/vadorovsky/aya/commit/ecf0dd973985bd442978b202d0fd6f75647cdda3))
+    - S/Result<usize, ()>/Option<NonZeroUsize>/ ([`ca3f70b`](https://github.com/vadorovsky/aya/commit/ca3f70b16a705bf26d2ccc7ce754de403be36223))
+    - Merge pull request #683 from aya-rs/logs-wtf ([`5ebaf5f`](https://github.com/vadorovsky/aya/commit/5ebaf5f39369289fbf4f6292dde2d697d45d3111))
+    - Refactor log macro for readability ([`b3db916`](https://github.com/vadorovsky/aya/commit/b3db9161eb304a4b83aa6122ebfc3d81fd4cd995))
+    - Merge pull request #667 from vadorovsky/workspace-dependencies ([`f554d42`](https://github.com/vadorovsky/aya/commit/f554d421053bc34266afbf8e00b28705ab4b41d2))
+    - Define dependencies on the workspace level ([`96fa08b`](https://github.com/vadorovsky/aya/commit/96fa08bd82233268154edf30b106876f5a4f0e30))
+    - Merge pull request #611 from probulate/check-refs-not-values ([`3f1a469`](https://github.com/vadorovsky/aya/commit/3f1a469f068a0af9bdb137796504a72163fb41cf))
+    - Simplify argument validation ([`6feebef`](https://github.com/vadorovsky/aya/commit/6feebef9e551256156a8c22cf5de2165846a4793))
+    - Avoid requiring Copy ([`de79724`](https://github.com/vadorovsky/aya/commit/de7972483b5b97c073b337568328a022378ebca9))
+    - Fix compile errors ([`47a2f25`](https://github.com/vadorovsky/aya/commit/47a2f25fca21e65d981b716d68f87af6203093d9))
+    - Unify IP format hints into one, repsesent it by `:i` token ([`84e5e28`](https://github.com/vadorovsky/aya/commit/84e5e2894f226f4b2c7cb637a6f44d5773b927e6))
+    - Merge pull request #606 from Hanaasagi/check-format-in-log ([`58f1ecb`](https://github.com/vadorovsky/aya/commit/58f1ecbf0089194d729327692adca6391fc24932))
+    - Check format and value type in proc macro ([`0970300`](https://github.com/vadorovsky/aya/commit/0970300d1f5659622fa55a18dd7681c608d75b0f))
+    - Merge pull request #585 from probulate/tag-len-value ([`5165bf2`](https://github.com/vadorovsky/aya/commit/5165bf2f99cdc228122bdab505c2059723e95a9f))
+    - Ensure WriteToBuf is used ([`4d098ef`](https://github.com/vadorovsky/aya/commit/4d098ef413dee3fe1cd260f19f7f90e69a06f06c))
+    - Merge pull request #550 from aya-rs/dependabot/cargo/syn-2.0 ([`3ad3cb9`](https://github.com/vadorovsky/aya/commit/3ad3cb9ed83f211bee2bfb68a2520f75b123d338))
+    - Update syn requirement from 1.0 to 2.0 ([`45072c0`](https://github.com/vadorovsky/aya/commit/45072c078903a062f6aba4ed1562e0df091ee90e))
+    - Merge pull request #456 from dmitris/uninlined_format_args ([`16b029e`](https://github.com/vadorovsky/aya/commit/16b029ed3708470afd2a6d67615b30c8d30b5059))
+    - Fix uninlined_format_args clippy issues ([`055d94f`](https://github.com/vadorovsky/aya/commit/055d94f58be4f80ada416b99278a22f600c71285))
+    - Merge pull request #436 from vadorovsky/aya-log-mac-addr ([`3adb9b0`](https://github.com/vadorovsky/aya/commit/3adb9b049f493ec9b80fcf868a8eac3363d17844))
+    - Add format hints for MAC addresses ([`2223ab8`](https://github.com/vadorovsky/aya/commit/2223ab828d6db40a85cff4737f6164ed8ee9e42d))
+    - Fix the DisplayHint expression names ([`9a8409e`](https://github.com/vadorovsky/aya/commit/9a8409e3a24179f4f60e6587b70e2ecd12322973))
+    - Add display hints ([`83ec27f`](https://github.com/vadorovsky/aya/commit/83ec27f06b6859f455f2b2baf985b8fd3fb4adc5))
+    - Change from Rust edition 2018 to 2021 ([`944d6b8`](https://github.com/vadorovsky/aya/commit/944d6b8a1647df36c17cd060b15c37ac9615f4a7))
+    - Merge pull request #350 from dave-tucker/monorepo ([`f37a514`](https://github.com/vadorovsky/aya/commit/f37a51433ff5283205ba5d1e74cdc75fbdeea160))
+    - Re-organize into a single workspace ([`dc31e11`](https://github.com/vadorovsky/aya/commit/dc31e11691bbb8ae916da9da873fdc37ff261c27))
 </details>
 

@@ -7,24 +7,313 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## v0.3.0 (2026-06-24)
+
+### Chore
+
+ - <csr-id-f6c5cb2ad2b09760ae5434785ed5d4d195d3a765/> set clippy unused_trait_names = warn
+   We have previously tried to import traits anonymously where possible but
+   enforcing this manually was hard.
+   
+   Since Rust 1.83 clippy can now enforce this for us.
+ - <csr-id-e82253c915fd87af1a5b6a8e657d4860285ba2b2/> Regenerate bindings
+   libbpf commit: d4a841a32b04d69194ab5bdac359a51938a206ce
+   
+   Files changed:
+   M	aya-obj/src/generated/linux_bindings_aarch64.rs
+   M	aya-obj/src/generated/linux_bindings_armv7.rs
+   M	aya-obj/src/generated/linux_bindings_mips.rs
+   M	aya-obj/src/generated/linux_bindings_powerpc64.rs
+   M	aya-obj/src/generated/linux_bindings_riscv64.rs
+   M	aya-obj/src/generated/linux_bindings_s390x.rs
+   M	aya-obj/src/generated/linux_bindings_x86_64.rs
+   M	xtask/public-api/aya-obj.txt
+ - <csr-id-b686d6a245a8d91b6677102c26c57f67e38d47ca/> Regenerate bindings
+   libbpf commit: d4a841a32b04d69194ab5bdac359a51938a206ce
+   
+   Files changed:
+   M	aya-obj/src/generated/linux_bindings_aarch64.rs
+   M	aya-obj/src/generated/linux_bindings_armv7.rs
+   M	aya-obj/src/generated/linux_bindings_mips.rs
+   M	aya-obj/src/generated/linux_bindings_powerpc64.rs
+   M	aya-obj/src/generated/linux_bindings_riscv64.rs
+   M	aya-obj/src/generated/linux_bindings_s390x.rs
+   M	aya-obj/src/generated/linux_bindings_x86_64.rs
+   M	xtask/public-api/aya-obj.txt
+ - <csr-id-4f0559f2afeca1dfae120bacf1742d58268bca37/> Fix cippy errors
+
+### New Features
+
+ - <csr-id-c1eb42780c8e0eba340808eb4b75df15ac434e61/> add typos-cli configuration and CI
+ - <csr-id-3ff609114e9be9ba029072bd9d86ef48beb03b9c/> Added MIPS bindings
+   Updated `aya-obj/src/generated/mod.rs` and
+   `bpf/aya-bpf-bindings/src/lib.rs to use the mips bindings.
+ - <csr-id-bf2164c92f5280e8b9c7178b9cbf338931ce778d/> Add iterator program type
+   BPF iterators[0] are a way to dump kernel data into user-space and an
+   alternative to `/proc` filesystem.
+   
+   This change adds support for BPF iterators on the user-space side. It
+   provides a possibility to retrieve the outputs of BPF iterator programs
+   both from sync and async Rust code.
+   
+   [0] https://docs.kernel.org/bpf/bpf_iterators.html
+
+### Bug Fixes
+
+ - <csr-id-215048bf9078af298072bf5ef8f36843e08b7799/> simplify BTF map detection and fix peek syscall name
+   Use `btf_value_type_id` alone to detect BTF maps in `parse_map_info`.
+   
+   Checking both type IDs here is redundant. Keyless BTF maps such as bloom
+   filters may leave `btf_key_type_id` unset, while `btf_value_type_id` still
+   reliably identifies the map as BTF-backed. Using the value type keeps the
+   logic smaller and avoids misclassifying keyless maps as legacy maps.
+   
+   Also update `BloomFilter::contains` to report `bpf_map_peek_elem` and adjust
+   the unit test to expect the correct syscall name.
+
+### Other
+
+ - <csr-id-073912689c6c842bba594eae349b8ddd3b0c2d91/> Remove the `no_std` support
+   The original motivation for `no_std` support in `aya-obj` was to keep it
+   closer to `object`. In practice, though, one of `aya-obj`'s main jobs is
+   sanitizing bytecode and BTF, and that logic relies on dynamic data
+   structures.
+   
+   Given that, keeping `no_std` support no longer reflects how the crate is
+   actually used and only adds maintenance overhead.
+ - <csr-id-4940ee6c69196634de9bf2f3c434cb5a57f194e5/> add BPF_PROG_TYPE_SK_REUSEPORT support
+   Implement SK_REUSEPORT programs for programmable socket selection
+   within SO_REUSEPORT groups.
+   
+   SkReuseport attaches and detaches via setsockopt rather than
+   bpf_link, making it group-scoped: any socket in the group can
+   attach or detach the program, and dropping SkReuseport does not
+   detach it. Section parsing handles both sk_reuseport and
+   sk_reuseport/migrate with the correct expected_attach_type.
+   
+   ReusePortSockArray is available in legacy and BTF variants.
+   select_reuseport() is deduplicated across both via a pub(crate)
+   trait. SkReuseportContext exposes sk_reuseport_md field
+   accessors; sk() and migrating_sk() require Linux 5.14+.
+   
+   Integration tests verify socket steering, slot clearing with
+   fallback, and migrate-path selection.
+ - <csr-id-879925717b88957fcb71e1dd7df3022372dfb796/> add mips64 arch
+   Wire up mips64 now that bindings are generated. MIPS64 uses the N64 ABI
+   with the same pt_regs layout as MIPS (regs[4..11] for arguments, regs[2]
+   for return value), so the PtRegsLayout impl is shared via cfg(any(...)).
+ - <csr-id-5bce2b7e2945867df59c943cfafdfd793a4e0afc/> mask Func linkage with 16 bits
+   Match `Func::new` and `set_linkage`, which store linkage in the low
+   16 bits of `info`; reading with 0xFFF dropped the high nibble of that
+   field.
+ - <csr-id-8f690b77343dd283abf67a4ab7d0741ede21a492/> fix line_info.num_info when linking functions
+   Set num_info from the merged line_info table length, matching func_info
+   handling and BTF line_info record counts.
+ - <csr-id-930fa7b8af9918d241779054f6dc5c52005e8f14/> generalize btf_map_def macro type parameters
+   Modify the btf_map_def! macro to generate flat #[repr(C)] structs
+   instead of UnsafeCell wrappers. This produces BTF that both aya
+   and libbpf can parse.
+   
+   Support type parameters with optional defaults and const generics with
+   configurable types. Allow trailing commas and improve formatting.
+   
+   Also remove UnsafeCell traversal code from aya-obj loader since
+   it is no longer needed with flat struct layout.
+ - <csr-id-ab38afe95d16226f5a703bbb37c7842ee441c364/> support hardware breakpoints
+   Implement `PerfEventConfig::Breakpoint`, allowing users to attach
+   hardware breakpoints. Generate `HW_BREAKPOINT_*` and `struct
+   bpf_perf_event_data` in support of this feature and update the type of
+   `PerfEventContext` accordingly.
+   
+   Add a test exercising R, W, RW, and X breakpoints. Note that R
+   breakpoints are unsupported on x86, and this is asserted in the test.
+   
+   Extend the VM integration test harness and supporting infrastructure
+   (e.g. `download_kernel_images.sh`) to download kernel debug packages and
+   mount `System.map` in initramfs. This is needed (at least) on the aarch
+   6.1 Debian kernel which was not compiled with `CONFIG_KALLSYMS_ALL=y`
+   for some reason, and the locations of globals are not available in
+   kallsyms. To attach breakpoints to these symbols in the test pipeline,
+   we need to read them from System.map and apply the KASLR offset to get
+   their real address. The `System.map` file is not provided in the kernel
+   package by default, so we need to extract it from the corresponding
+   debug package. The KASLR offset is computed using `gunzip` which appears
+   in kallsyms on all Debian kernels tested.
+ - <csr-id-866cbe4837f2b3b3d9e9418c3de2a125781f5ab6/> bump MSRV to 1.87.0
+   Use newly stabilized `is_multiple_of`.
+ - <csr-id-8e9404ecd4c229cccc13e691b2b59dc4c6ccc4ba/> apply enum64-to-union fixup in reloc
+   This code is just awful.
+ - <csr-id-7224efcad8726439e9ac9ccdc28e19116bf00606/> patch up 0-size datasec
+   Use OnceCell for ENUM64 while I'm here as well.
+ - <csr-id-166ad2f40f801b6ba6eb9bccf20e9206ad3fc2b5/> reduce repetition
+   This code is bad.
+ - <csr-id-122cf17a43acbf4f4999c6bb685bf626d0833873/> avoid `unreachable!()` and `unwrap()`
+ - <csr-id-fc5387c80626957017ceeb988322bc288f438059/> cgroup attachment type support
+ - <csr-id-30182463bdb6cce592477e66659d5f66f846cfcf/> explicitly enable hashbrown features
+ - <csr-id-0b2a544ddd9df74ebcdb46128b6bcc48336b2762/> Add BTF array definition
+   Before this change, Aya supported only legacy BPF map definitions, which
+   are instances of the `bpf_map_def` struct and end up in the `maps` ELF
+   section.
+   
+   This change introduces a BTF map definition for arrays, with custom
+   structs indicating the metadata of the map, which end up in the `.maps`
+   section.
+ - <csr-id-e0ceb6214b35a0f7dd29262b48f21d4906e0ee90/> Remove `Safety: union` comments
+   They serve no purpose, there are no unions no unsafe operations around.
+ - <csr-id-658ae0fbb9209ad5460057a992b0c8e8f270e0c0/> simplify using CStr::from_bytes_until_nul
+ - <csr-id-23bc5b5836c3b8383f2f8a78bd3902e193a7a176/> cache feat probed info fields
+   Cached probed for ProgramInfo fields instead of exposing it through
+   global FEATURE. Probing occurs on cache miss, which happens when first
+   accessing the field, *and* if the field is 0.
+ - <csr-id-49a828ec5655f6ecd0c38083c6c0dca217bad777/> reorder-keys
+   Group non-workspace keys before workspace ones for readability.
+ - <csr-id-6252b4c9722c7c2ee2458741ae328dcc0c3c5234/> hook up loongarch64
+   This causes rustfmt to format those files.
+   
+   Squish some other conditional compilation to get rustfmt sorting.
+ - <csr-id-56ebe1406e088dc52d7c796be725df74356fcad8/> do not attempt to run rustfmt
+   This can be done externally. Do so in CI.
+   
+   This is an attempt to resolve the inconsistency between CI and local
+   rustfmt in the generated bindings.
+   
+   Restore running CI on generated branches; the presence of a PR is
+   apparently not enough.
+ - <csr-id-bdd8ae2d0b443513c73143da968d400df9b05464/> avoid `_`
+   This can silently discard information, so we shouldn't do it.
+ - <csr-id-9a47495227a03400fa2549b07fe8af131f21e759/> preserve pointer provenance
+ - <csr-id-b500a6326b7df8a147c0c7a0121888c3ad79fd85/> use `cfg!` to tidy up
+ - <csr-id-c8f14b18d48fd4f92d97c89864d51a23fbe9d943/> tidy up
+   Move some code out of a loop, where it appears to be nonsense.
+ - <csr-id-919833510095cfc49d1b9874429f403167227fbd/> remove outdated workaround
+   bindgen can handle these macros now.
+ - <csr-id-94c857261acb0f18cd9f91954cc325e503664217/> use generated constants
+ - <csr-id-e95a54f59388228c0551c9c66be0d436b45d2c71/> update thiserror to 2.0.3
+   This removes the fake std module in aya-obj which is no longer needed as
+   thiserror now properly supports no_std.
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 74 commits contributed to the release.
+ - 36 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#1501](https://github.com/vadorovsky/aya/issues/1501)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#1501](https://github.com/vadorovsky/aya/issues/1501)**
+    - Aya, aya-ebpf, aya-obj: add BTF bloom filter support ([`904fbe2`](https://github.com/vadorovsky/aya/commit/904fbe265e8a97c7c4869a0898bcfd71502aae62))
+ * **Uncategorized**
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`c3c76c7`](https://github.com/vadorovsky/aya/commit/c3c76c70a6de1159f906cc5dd14a6b0411075260))
+    - Add typos-cli configuration and CI ([`c1eb427`](https://github.com/vadorovsky/aya/commit/c1eb42780c8e0eba340808eb4b75df15ac434e61))
+    - Aya, aya-ebpf, aya-obj: add HashOfMaps and ArrayOfMaps ([`4075b5e`](https://github.com/vadorovsky/aya/commit/4075b5ec62beeb7b69c1d99847ec9c65ba85a49f))
+    - Remove the `no_std` support ([`0739126`](https://github.com/vadorovsky/aya/commit/073912689c6c842bba594eae349b8ddd3b0c2d91))
+    - Add BPF_PROG_TYPE_SK_REUSEPORT support ([`4940ee6`](https://github.com/vadorovsky/aya/commit/4940ee6c69196634de9bf2f3c434cb5a57f194e5))
+    - Add mips64 arch ([`8799257`](https://github.com/vadorovsky/aya/commit/879925717b88957fcb71e1dd7df3022372dfb796))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`20d8d64`](https://github.com/vadorovsky/aya/commit/20d8d64c3b8bd3aaf495708115f8eae3ce7e54d2))
+    - Simplify BTF map detection and fix peek syscall name ([`215048b`](https://github.com/vadorovsky/aya/commit/215048bf9078af298072bf5ef8f36843e08b7799))
+    - Remove duplicate attach type state ([`7b6b752`](https://github.com/vadorovsky/aya/commit/7b6b752dc1536d6d13bebc939ce404781810fcbd))
+    - Mask Func linkage with 16 bits ([`5bce2b7`](https://github.com/vadorovsky/aya/commit/5bce2b7e2945867df59c943cfafdfd793a4e0afc))
+    - Fix line_info.num_info when linking functions ([`8f690b7`](https://github.com/vadorovsky/aya/commit/8f690b77343dd283abf67a4ab7d0741ede21a492))
+    - Appease clippy ([`aa122f3`](https://github.com/vadorovsky/aya/commit/aa122f319f2c1169d7b97ff4332205eccc09641d))
+    - Dial the lints to 100 ([`2f8759c`](https://github.com/vadorovsky/aya/commit/2f8759cc62e2a420eef463e271d354fcf65eca9d))
+    - Generalize btf_map_def macro type parameters ([`930fa7b`](https://github.com/vadorovsky/aya/commit/930fa7b8af9918d241779054f6dc5c52005e8f14))
+    - Enable unused_qualifications lint ([`e746618`](https://github.com/vadorovsky/aya/commit/e746618143f010fe7f05635a1a6e1a8b723bfd31))
+    - Aya, aya-ebpf: reduce duplication ([`f35f7a3`](https://github.com/vadorovsky/aya/commit/f35f7a3610d8296d97c6f0a47e75dbb4188f5212))
+    - Add licese for aya-obj ([`7a3c03e`](https://github.com/vadorovsky/aya/commit/7a3c03e178ced68f63cd1f6cfa3f8fa56459aee9))
+    - Release crates ([`d238b2e`](https://github.com/vadorovsky/aya/commit/d238b2ea6f1b2c1aa09a9050415b1c96329af0aa))
+    - Support hardware breakpoints ([`ab38afe`](https://github.com/vadorovsky/aya/commit/ab38afe95d16226f5a703bbb37c7842ee441c364))
+    - Bump MSRV to 1.87.0 ([`866cbe4`](https://github.com/vadorovsky/aya/commit/866cbe4837f2b3b3d9e9418c3de2a125781f5ab6))
+    - Apply enum64-to-union fixup in reloc ([`8e9404e`](https://github.com/vadorovsky/aya/commit/8e9404ecd4c229cccc13e691b2b59dc4c6ccc4ba))
+    - Patch up 0-size datasec ([`7224efc`](https://github.com/vadorovsky/aya/commit/7224efcad8726439e9ac9ccdc28e19116bf00606))
+    - Reduce repetition ([`166ad2f`](https://github.com/vadorovsky/aya/commit/166ad2f40f801b6ba6eb9bccf20e9206ad3fc2b5))
+    - Avoid `unreachable!()` and `unwrap()` ([`122cf17`](https://github.com/vadorovsky/aya/commit/122cf17a43acbf4f4999c6bb685bf626d0833873))
+    - Promote BTF loading failure to error on BTF relocs ([`3ade19b`](https://github.com/vadorovsky/aya/commit/3ade19b869dd3aa746d17e52bb3c7b683859e413))
+    - Improve error output ([`f76fdf9`](https://github.com/vadorovsky/aya/commit/f76fdf9da51852f5e13011b2d3ba6f9204943de7))
+    - Cgroup attachment type support ([`fc5387c`](https://github.com/vadorovsky/aya/commit/fc5387c80626957017ceeb988322bc288f438059))
+    - Lint all crates; enable strict pointer lints ([`5f5305c`](https://github.com/vadorovsky/aya/commit/5f5305c2a8ca0a739219093599dd57182d440ac1))
+    - Explicitly enable hashbrown features ([`3018246`](https://github.com/vadorovsky/aya/commit/30182463bdb6cce592477e66659d5f66f846cfcf))
+    - Add BTF array definition ([`0b2a544`](https://github.com/vadorovsky/aya/commit/0b2a544ddd9df74ebcdb46128b6bcc48336b2762))
+    - Remove `Safety: union` comments ([`e0ceb62`](https://github.com/vadorovsky/aya/commit/e0ceb6214b35a0f7dd29262b48f21d4906e0ee90))
+    - Simplify using CStr::from_bytes_until_nul ([`658ae0f`](https://github.com/vadorovsky/aya/commit/658ae0fbb9209ad5460057a992b0c8e8f270e0c0))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`23cbab5`](https://github.com/vadorovsky/aya/commit/23cbab571ce49073cd128f2ad79e4dadac536cb3))
+    - Remove superfluous commas ([`a3aa387`](https://github.com/vadorovsky/aya/commit/a3aa387a2e8035660425cefb4f6171d5fdb7537e))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`bd0424c`](https://github.com/vadorovsky/aya/commit/bd0424ca61a1c9ccd6e15e5a846c2915d067a7ea))
+    - Remove stale comment since a1b46ece05e73896250f86815c4ad6df6095797d ([`b6daf46`](https://github.com/vadorovsky/aya/commit/b6daf463e6605b5d32da103f11349fffcb8ed63a))
+    - Cache feat probed info fields ([`23bc5b5`](https://github.com/vadorovsky/aya/commit/23bc5b5836c3b8383f2f8a78bd3902e193a7a176))
+    - Appease `clippy::uninlined-format-args` ([`583709f`](https://github.com/vadorovsky/aya/commit/583709f6a09c432b4e06ab9353bb4e397d58c451))
+    - Merge pull request #1239 from aya-rs/create-pull-request/codegen ([`756d817`](https://github.com/vadorovsky/aya/commit/756d8172f5e364c61fff7d2a34b776f5c6528696))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`5e4e12c`](https://github.com/vadorovsky/aya/commit/5e4e12ce78d303f29f995e1835d27d8022d4b344))
+    - Merge pull request #1224 from dave-tucker/unused_trait_names ([`9eecbe9`](https://github.com/vadorovsky/aya/commit/9eecbe9d0e9dc1fdbbc87d41512d4202e26d4687))
+    - Add support for Flow Dissector programs ([`77b1c61`](https://github.com/vadorovsky/aya/commit/77b1c6194c8f9bb69ffc6a60c3b8189b73e00e8f))
+    - Set clippy unused_trait_names = warn ([`f6c5cb2`](https://github.com/vadorovsky/aya/commit/f6c5cb2ad2b09760ae5434785ed5d4d195d3a765))
+    - Reorder-keys ([`49a828e`](https://github.com/vadorovsky/aya/commit/49a828ec5655f6ecd0c38083c6c0dca217bad777))
+    - Introduce workspace lints, warn on unused crates ([`a43e40a`](https://github.com/vadorovsky/aya/commit/a43e40ae1d1441ab4aea6a1a5d9ea36b56d62ff8))
+    - Hook up loongarch64 ([`6252b4c`](https://github.com/vadorovsky/aya/commit/6252b4c9722c7c2ee2458741ae328dcc0c3c5234))
+    - Do not attempt to run rustfmt ([`56ebe14`](https://github.com/vadorovsky/aya/commit/56ebe1406e088dc52d7c796be725df74356fcad8))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`2bb2302`](https://github.com/vadorovsky/aya/commit/2bb2302d1d59335516874a87e27a26f5c554004c))
+    - Bump edition to 2024 ([`f0a9f19`](https://github.com/vadorovsky/aya/commit/f0a9f19ddc7f02143a02dcc2bf6be88fa2d84063))
+    - Reduce the scope of expected warnings ([`ea5f7e3`](https://github.com/vadorovsky/aya/commit/ea5f7e3015477717fc4a96fed2e5e7e496d2dd66))
+    - Use #[expect(...)] rather than #[allow(...)] ([`4101a5a`](https://github.com/vadorovsky/aya/commit/4101a5a55d43cd9ead56497820c4d43018f74cbb))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`ce0e93c`](https://github.com/vadorovsky/aya/commit/ce0e93c75d4c0032d4766af3d4295bb9395f6876))
+    - Avoid `_` ([`bdd8ae2`](https://github.com/vadorovsky/aya/commit/bdd8ae2d0b443513c73143da968d400df9b05464))
+    - Use `ignore` rather than not compile on big endian ([`5ff57f1`](https://github.com/vadorovsky/aya/commit/5ff57f1d9ec0ee8366a933785cbd9f550c248520))
+    - Preserve pointer provenance ([`9a47495`](https://github.com/vadorovsky/aya/commit/9a47495227a03400fa2549b07fe8af131f21e759))
+    - Use `cfg!` to tidy up ([`b500a63`](https://github.com/vadorovsky/aya/commit/b500a6326b7df8a147c0c7a0121888c3ad79fd85))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`f49a761`](https://github.com/vadorovsky/aya/commit/f49a761c2776709469901d1c9108f81247ca8d65))
+    - Aya-obj, aya-ebpf-bindings: regenerate ([`ade2e2a`](https://github.com/vadorovsky/aya/commit/ade2e2a739dbe0b1c44b02c19fed8343121dd00a))
+    - Tidy up ([`c8f14b1`](https://github.com/vadorovsky/aya/commit/c8f14b18d48fd4f92d97c89864d51a23fbe9d943))
+    - Remove outdated workaround ([`9198335`](https://github.com/vadorovsky/aya/commit/919833510095cfc49d1b9874429f403167227fbd))
+    - Use generated constants ([`94c8572`](https://github.com/vadorovsky/aya/commit/94c857261acb0f18cd9f91954cc325e503664217))
+    - Regenerate bindings ([`e82253c`](https://github.com/vadorovsky/aya/commit/e82253c915fd87af1a5b6a8e657d4860285ba2b2))
+    - Merge pull request #1158 from aya-rs/codegen ([`0865e08`](https://github.com/vadorovsky/aya/commit/0865e08dcf62e801ab670134bbcdd1b170d8cbe8))
+    - Regenerate bindings ([`b686d6a`](https://github.com/vadorovsky/aya/commit/b686d6a245a8d91b6677102c26c57f67e38d47ca))
+    - Merge pull request #482 from ishanjain28/add_mips_support ([`2f757b2`](https://github.com/vadorovsky/aya/commit/2f757b2091d28a17c90495ee2955e7f8d1bc5ec5))
+    - Added MIPS bindings ([`3ff6091`](https://github.com/vadorovsky/aya/commit/3ff609114e9be9ba029072bd9d86ef48beb03b9c))
+    - Merge pull request #1155 from aya-rs/codegen ([`66da874`](https://github.com/vadorovsky/aya/commit/66da8742feaf80d1e195e25f0cf715a8cc00012c))
+    - [codegen] Update libbpf to 324f3c3846d99c8a1e1384a55591f893f0ae5de4 ([`701a933`](https://github.com/vadorovsky/aya/commit/701a9333457ce008440350a9f465fe1f280c6069))
+    - Appease clippy ([`0429ed2`](https://github.com/vadorovsky/aya/commit/0429ed2fa299636428b65573456cffe0aac2beca))
+    - Fix cippy errors ([`4f0559f`](https://github.com/vadorovsky/aya/commit/4f0559f2afeca1dfae120bacf1742d58268bca37))
+    - Add iterator program type ([`bf2164c`](https://github.com/vadorovsky/aya/commit/bf2164c92f5280e8b9c7178b9cbf338931ce778d))
+    - Merge pull request #1079 from aya-rs/dependabot/cargo/cargo-crates-bfb59a9473 ([`103eed1`](https://github.com/vadorovsky/aya/commit/103eed13959fb4e3ed98783de3002ddac2a67b2f))
+    - Update thiserror to 2.0.3 ([`e95a54f`](https://github.com/vadorovsky/aya/commit/e95a54f59388228c0551c9c66be0d436b45d2c71))
+</details>
+
 ## v0.2.2 (2025-11-17)
+
+<csr-id-23bc5b5836c3b8383f2f8a78bd3902e193a7a176/>
+<csr-id-9a47495227a03400fa2549b07fe8af131f21e759/>
 
 ### New Features
 
  - <csr-id-77b1c6194c8f9bb69ffc6a60c3b8189b73e00e8f/> Updated the loader to understand Flow Dissector programs so objects containing those sections can now be parsed and attached.
- - <csr-id-3ff60911375a6044bbf9060bef25aa5e9d3747ae/>, <csr-id-6252b4c9722c7c2ee2458741ae328dcc0c3c5234/> Regenerated libbpf bindings, bringing in MIPS and LoongArch64 support.
- - <csr-id-94c85726b3860787152b0ab9929f3d69f777e7a3/>, <csr-id-658ae0fbd27b481780dc8df0c9ff4021777fe94c/> Switched to generated constants and helper APIs (e.g. `CStr::from_bytes_until_nul`) for safer symbol handling.
+ - <csr-id-3ff60911375a6044bbf9060bef25aa5e9d3747ae/> , <csr-id-6252b4c9722c7c2ee2458741ae328dcc0c3c5234/> Regenerated libbpf bindings, bringing in MIPS and LoongArch64 support.
+ - <csr-id-94c85726b3860787152b0ab9929f3d69f777e7a3/> , <csr-id-658ae0fbd27b481780dc8df0c9ff4021777fe94c/> Switched to generated constants and helper APIs (e.g. `CStr::from_bytes_until_nul`) for safer symbol handling.
 
 ### Bug Fixes
 
- - <csr-id-7224efcad8726439e9ac9ccdc28e19116bf00606/>, <csr-id-8e9404ec3cc0564cafad6a733cb138ed1421d462/> Fixed BTF relocations involving zero-sized sections and 64-bit enums so objects built with newer clang/jit toolchains load correctly.
- - <csr-id-3ade19b869dd3aa746d17e52bb3c7b683859e413/>, <csr-id-f76fdf9da51852f5e13011b2d3ba6f9204943de7/> Promoted BTF loading failures (and diagnostic output) to proper errors instead of panics/unreachable paths.
+ - <csr-id-7224efcad8726439e9ac9ccdc28e19116bf00606/> , <csr-id-8e9404ec3cc0564cafad6a733cb138ed1421d462/> Fixed BTF relocations involving zero-sized sections and 64-bit enums so objects built with newer clang/jit toolchains load correctly.
+ - <csr-id-3ade19b869dd3aa746d17e52bb3c7b683859e413/> , <csr-id-f76fdf9da51852f5e13011b2d3ba6f9204943de7/> Promoted BTF loading failures (and diagnostic output) to proper errors instead of panics/unreachable paths.
 
 ### Maintenance
 
  - <csr-id-23bc5b5836c3b8383f2f8a78bd3902e193a7a176/>, <csr-id-9a47495227a03400fa2549b07fe8af131f21e759/> Cached feature-probed info fields and preserved pointer provenance, plus the usual lint/edition updates to stay aligned with the workspace.
 
 ## 0.2.1 (2024-11-01)
+
+<csr-id-366c599c2083baf72c40c816da2c530dec7fd612/>
+<csr-id-fbb09304a2de0d8baf7ea20c9727fcd2e4fb7f41/>
+<csr-id-88f5ac31142f1657b41b1ee0f217dcd9125b210a/>
+<csr-id-1634fa7188e40ed75da53517f1fdb7396c348c34/>
+<csr-id-b513af12e8baa5c5097eaf0afdae61a830c3f877/>
+<csr-id-b06ff402780b80862933791831c578e4c339fc96/>
+<csr-id-4dc4b5ccd48bd86e2cc59ad7386514c1531450af/>
+<csr-id-eef7346fb2231f8741410381198015cceeebfac9/>
 
 ### New Features
 
@@ -120,7 +409,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 25 commits contributed to the release over the course of 241 calendar days.
+ - 26 commits contributed to the release over the course of 241 calendar days.
  - 247 days passed between releases.
  - 12 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 0 issues like '(#ID)' were seen in commit messages
@@ -132,31 +421,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details><summary>view details</summary>
 
  * **Uncategorized**
-    - Merge pull request #1073 from dave-tucker/reloc-bug ([`b2ac9fe`](https://github.com/aya-rs/aya/commit/b2ac9fe85db6c25d0b8155a75a2df96a80a19811))
-    - Fill bss maps with zeros ([`ca0c32d`](https://github.com/aya-rs/aya/commit/ca0c32d1076af81349a52235a4b6fb3937a697b3))
-    - Merge pull request #1055 from aya-rs/codegen ([`59b3873`](https://github.com/aya-rs/aya/commit/59b3873a92d1eb49ca1008cb193e962fa95b3e97))
-    - [codegen] Update libbpf to 80b16457cb23db4d633b17ba0305f29daa2eb307 ([`f8ad84c`](https://github.com/aya-rs/aya/commit/f8ad84c3d322d414f27375044ba694a169abfa76))
-    - Cgroup_iter_order NFPROTO* nf_inet_hooks ([`366c599`](https://github.com/aya-rs/aya/commit/366c599c2083baf72c40c816da2c530dec7fd612))
-    - Release aya-obj v0.2.0, aya v0.13.0, safety bump aya v0.13.0 ([`c169b72`](https://github.com/aya-rs/aya/commit/c169b727e6b8f8c2dda57f54b8c77f8b551025c6))
-    - Appease clippy ([`aa240ba`](https://github.com/aya-rs/aya/commit/aa240baadf99d3fea0477a9b3966789b0f4ffe57))
-    - Merge pull request #1007 from tyrone-wu/aya/info-api ([`15eb935`](https://github.com/aya-rs/aya/commit/15eb935bce6d41fb67189c48ce582b074544e0ed))
-    - Revamp MapInfo be more friendly with older kernels ([`fbb0930`](https://github.com/aya-rs/aya/commit/fbb09304a2de0d8baf7ea20c9727fcd2e4fb7f41))
-    - Revamp ProgramInfo be more friendly with older kernels ([`88f5ac3`](https://github.com/aya-rs/aya/commit/88f5ac31142f1657b41b1ee0f217dcd9125b210a))
-    - Add conversion u32 to enum type for prog, link, & attach type ([`1634fa7`](https://github.com/aya-rs/aya/commit/1634fa7188e40ed75da53517f1fdb7396c348c34))
-    - Merge pull request #974 from Billy99/billy99-arch-ppc64-s390x ([`ab5e688`](https://github.com/aya-rs/aya/commit/ab5e688fd49fcfb402ad47d51cb445437fbd8cb7))
-    - Adjust test to not use byte arrays ([`4dc4b5c`](https://github.com/aya-rs/aya/commit/4dc4b5ccd48bd86e2cc59ad7386514c1531450af))
-    - Add archs powerpc64 and s390x to aya ([`b513af1`](https://github.com/aya-rs/aya/commit/b513af12e8baa5c5097eaf0afdae61a830c3f877))
-    - Adjust test byte arrays for big endian ([`eef7346`](https://github.com/aya-rs/aya/commit/eef7346fb2231f8741410381198015cceeebfac9))
-    - Merge pull request #989 from aya-rs/codegen ([`8015e10`](https://github.com/aya-rs/aya/commit/8015e100796c550804ccf8fea691c63ec1ac36b8))
-    - [codegen] Update libbpf to 686f600bca59e107af4040d0838ca2b02c14ff50 ([`8d7446e`](https://github.com/aya-rs/aya/commit/8d7446e01132fe1751605b87a6b4a0165273de15))
-    - Merge pull request #978 from aya-rs/codegen ([`06aa5c8`](https://github.com/aya-rs/aya/commit/06aa5c8ed344bd0d85096a0fd033ff0bd90a2f88))
-    - [codegen] Update libbpf to c1a6c770c46c6e78ad6755bf596c23a4e6f6b216 ([`8b50a6a`](https://github.com/aya-rs/aya/commit/8b50a6a5738b5a57121205490d26805c74cb63de))
-    - Document miri skip reasons ([`35962a4`](https://github.com/aya-rs/aya/commit/35962a4794484aa3b37dadc98a70a659fd107b75))
-    - Generate new bindings ([`b06ff40`](https://github.com/aya-rs/aya/commit/b06ff402780b80862933791831c578e4c339fc96))
-    - Merge pull request #528 from dave-tucker/rename-all-the-things ([`63d8d4d`](https://github.com/aya-rs/aya/commit/63d8d4d34bdbbee149047dc0a5e9c2b191f3b32d))
-    - Rename Bpf to Ebpf ([`8c79b71`](https://github.com/aya-rs/aya/commit/8c79b71bd5699a686f33360520aa95c1a2895fa5))
-    - Rename BpfRelocationError -> EbpfRelocationError ([`fd48c55`](https://github.com/aya-rs/aya/commit/fd48c55466a23953ce7a4912306e1acf059b498b))
-    - Rename BpfSectionKind to EbpfSectionKind ([`cf3e2ca`](https://github.com/aya-rs/aya/commit/cf3e2ca677c81224368fb2838ebc5b10ee98419a))
+    - Release aya-obj v0.2.1 ([`c6a34ca`](https://github.com/vadorovsky/aya/commit/c6a34cade195d682e1eece5b71e3ab48e48f3cda))
+    - Merge pull request #1073 from dave-tucker/reloc-bug ([`b2ac9fe`](https://github.com/vadorovsky/aya/commit/b2ac9fe85db6c25d0b8155a75a2df96a80a19811))
+    - Fill bss maps with zeros ([`ca0c32d`](https://github.com/vadorovsky/aya/commit/ca0c32d1076af81349a52235a4b6fb3937a697b3))
+    - Merge pull request #1055 from aya-rs/codegen ([`59b3873`](https://github.com/vadorovsky/aya/commit/59b3873a92d1eb49ca1008cb193e962fa95b3e97))
+    - [codegen] Update libbpf to 80b16457cb23db4d633b17ba0305f29daa2eb307 ([`f8ad84c`](https://github.com/vadorovsky/aya/commit/f8ad84c3d322d414f27375044ba694a169abfa76))
+    - Cgroup_iter_order NFPROTO* nf_inet_hooks ([`366c599`](https://github.com/vadorovsky/aya/commit/366c599c2083baf72c40c816da2c530dec7fd612))
+    - Release aya-obj v0.2.0, aya v0.13.0, safety bump aya v0.13.0 ([`c169b72`](https://github.com/vadorovsky/aya/commit/c169b727e6b8f8c2dda57f54b8c77f8b551025c6))
+    - Appease clippy ([`aa240ba`](https://github.com/vadorovsky/aya/commit/aa240baadf99d3fea0477a9b3966789b0f4ffe57))
+    - Merge pull request #1007 from tyrone-wu/aya/info-api ([`15eb935`](https://github.com/vadorovsky/aya/commit/15eb935bce6d41fb67189c48ce582b074544e0ed))
+    - Revamp MapInfo be more friendly with older kernels ([`fbb0930`](https://github.com/vadorovsky/aya/commit/fbb09304a2de0d8baf7ea20c9727fcd2e4fb7f41))
+    - Revamp ProgramInfo be more friendly with older kernels ([`88f5ac3`](https://github.com/vadorovsky/aya/commit/88f5ac31142f1657b41b1ee0f217dcd9125b210a))
+    - Add conversion u32 to enum type for prog, link, & attach type ([`1634fa7`](https://github.com/vadorovsky/aya/commit/1634fa7188e40ed75da53517f1fdb7396c348c34))
+    - Merge pull request #974 from Billy99/billy99-arch-ppc64-s390x ([`ab5e688`](https://github.com/vadorovsky/aya/commit/ab5e688fd49fcfb402ad47d51cb445437fbd8cb7))
+    - Adjust test to not use byte arrays ([`4dc4b5c`](https://github.com/vadorovsky/aya/commit/4dc4b5ccd48bd86e2cc59ad7386514c1531450af))
+    - Add archs powerpc64 and s390x to aya ([`b513af1`](https://github.com/vadorovsky/aya/commit/b513af12e8baa5c5097eaf0afdae61a830c3f877))
+    - Adjust test byte arrays for big endian ([`eef7346`](https://github.com/vadorovsky/aya/commit/eef7346fb2231f8741410381198015cceeebfac9))
+    - Merge pull request #989 from aya-rs/codegen ([`8015e10`](https://github.com/vadorovsky/aya/commit/8015e100796c550804ccf8fea691c63ec1ac36b8))
+    - [codegen] Update libbpf to 686f600bca59e107af4040d0838ca2b02c14ff50 ([`8d7446e`](https://github.com/vadorovsky/aya/commit/8d7446e01132fe1751605b87a6b4a0165273de15))
+    - Merge pull request #978 from aya-rs/codegen ([`06aa5c8`](https://github.com/vadorovsky/aya/commit/06aa5c8ed344bd0d85096a0fd033ff0bd90a2f88))
+    - [codegen] Update libbpf to c1a6c770c46c6e78ad6755bf596c23a4e6f6b216 ([`8b50a6a`](https://github.com/vadorovsky/aya/commit/8b50a6a5738b5a57121205490d26805c74cb63de))
+    - Document miri skip reasons ([`35962a4`](https://github.com/vadorovsky/aya/commit/35962a4794484aa3b37dadc98a70a659fd107b75))
+    - Generate new bindings ([`b06ff40`](https://github.com/vadorovsky/aya/commit/b06ff402780b80862933791831c578e4c339fc96))
+    - Merge pull request #528 from dave-tucker/rename-all-the-things ([`63d8d4d`](https://github.com/vadorovsky/aya/commit/63d8d4d34bdbbee149047dc0a5e9c2b191f3b32d))
+    - Rename Bpf to Ebpf ([`8c79b71`](https://github.com/vadorovsky/aya/commit/8c79b71bd5699a686f33360520aa95c1a2895fa5))
+    - Rename BpfRelocationError -> EbpfRelocationError ([`fd48c55`](https://github.com/vadorovsky/aya/commit/fd48c55466a23953ce7a4912306e1acf059b498b))
+    - Rename BpfSectionKind to EbpfSectionKind ([`cf3e2ca`](https://github.com/vadorovsky/aya/commit/cf3e2ca677c81224368fb2838ebc5b10ee98419a))
 </details>
 
 ## 0.2.0 (2024-10-09)
@@ -651,7 +941,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  - 146 commits contributed to the release.
  - 63 commits were understood as [conventional](https://www.conventionalcommits.org).
- - 1 unique issue was worked on: [#608](https://github.com/aya-rs/aya/issues/608)
+ - 1 unique issue was worked on: [#608](https://github.com/vadorovsky/aya/issues/608)
 
 ### Commit Details
 
@@ -659,153 +949,153 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <details><summary>view details</summary>
 
- * **[#608](https://github.com/aya-rs/aya/issues/608)**
-    - Fix load errors for empty (but existent) BTF/BTF.ext sections ([`5894c4c`](https://github.com/aya-rs/aya/commit/5894c4ce82948c7e5fe766f41b690d036fcca907))
+ * **[#608](https://github.com/vadorovsky/aya/issues/608)**
+    - Fix load errors for empty (but existent) BTF/BTF.ext sections ([`5894c4c`](https://github.com/vadorovsky/aya/commit/5894c4ce82948c7e5fe766f41b690d036fcca907))
  * **Uncategorized**
-    - Release aya-obj v0.1.0, aya v0.12.0, safety bump aya-log v0.2.0 ([`0e99fa0`](https://github.com/aya-rs/aya/commit/0e99fa0f340b2fb2e0da3b330aa6555322a77eec))
-    - Merge pull request #891 from dave-tucker/changelog ([`431ce23`](https://github.com/aya-rs/aya/commit/431ce23f27ef5c36a6b38c73b38f23b1cf007900))
-    - Add CHANGELOG ([`72e8aab`](https://github.com/aya-rs/aya/commit/72e8aab6c8be8663c5b6ff6b606a51debf512f7d))
-    - Appease new nightly clippy lints ([`3369169`](https://github.com/aya-rs/aya/commit/3369169aaca6510a47318fc29bbdb801b60b1c21))
-    - Merge pull request #882 from dave-tucker/metadata ([`0fadd69`](https://github.com/aya-rs/aya/commit/0fadd695377b8a3f0d9a3af3bc8140f0f1bed8d2))
-    - Use the cargo workspace package table ([`b3e7ef7`](https://github.com/aya-rs/aya/commit/b3e7ef741c5b8d09fc7dc8302576f8174be75ff4))
-    - Merge pull request #885 from dave-tucker/nightly-up ([`2d72197`](https://github.com/aya-rs/aya/commit/2d721971cfae39e168f0dc4dac1f219490c16fbf))
-    - Appease clippy unused imports ([`770a95e`](https://github.com/aya-rs/aya/commit/770a95e0779a6a943c2f5439334fa208ac2ca7e6))
-    - Handle lack of match of enum variants correctly ([`c05a3b6`](https://github.com/aya-rs/aya/commit/c05a3b69b7a94036c380bd64c6de51377987077c))
-    - Don't parse labels as programs ([`35e21ae`](https://github.com/aya-rs/aya/commit/35e21ae0079d38e90d90fc85d29580c8b44b16d4))
-    - Merge pull request #812 from tamird/redundant-cargo ([`715d490`](https://github.com/aya-rs/aya/commit/715d49022eefb152ef8817c730d9eac2b3e6d66f))
-    - Remove redundant keys ([`cc48523`](https://github.com/aya-rs/aya/commit/cc48523347c2be5520779ef8eeadc6d3a68649d0))
-    - Merge pull request #797 from aya-rs/rustfmt-group-imports ([`373fb7b`](https://github.com/aya-rs/aya/commit/373fb7bf06ba80ee4c120d8c112f5e810204c472))
-    - Group_imports = "StdExternalCrate" ([`d16e607`](https://github.com/aya-rs/aya/commit/d16e607fd4b6258b516913071fdacafeb2bbbff9))
-    - Merge pull request #527 from Tuetuopay/xdpmaps ([`7f9ce06`](https://github.com/aya-rs/aya/commit/7f9ce062f4b8b5cefbe07d8ea47363266f7eacd1))
-    - Aya, bpf: misc fixes following review comments ([`579e3ce`](https://github.com/aya-rs/aya/commit/579e3cee22ae8e932efb0894ca7fd9ceb91ca7fa))
-    - Make maps work on kernels not supporting ProgIds ([`00dc7a5`](https://github.com/aya-rs/aya/commit/00dc7a5bd4468b7d86d7f167a49e78d89016e2ac))
-    - Add support for map-bound XDP programs ([`139f382`](https://github.com/aya-rs/aya/commit/139f3826383daba9a10dc7aacc079f31d28980fc))
-    - Merge pull request #770 from aya-rs/mapfd-is-owned ([`41d01f6`](https://github.com/aya-rs/aya/commit/41d01f638bc81306749dd0f6aa7d2a677f4de27b))
-    - `MapFd` and `SockMapFd` are owned ([`f415926`](https://github.com/aya-rs/aya/commit/f41592663cda156082255b93db145cfdd19378e5))
-    - Merge pull request #766 from aya-rs/obj-better-sense ([`e9690df`](https://github.com/aya-rs/aya/commit/e9690df834b502575321ba32fd09f93eaacb03fa))
-    - Reduce indirection in section parsing ([`c139627`](https://github.com/aya-rs/aya/commit/c139627f8f180638b786b5e3cd48b8473d96fe56))
-    - Merge pull request #742 from aya-rs/avoid-utf-assumption ([`8ffd9bb`](https://github.com/aya-rs/aya/commit/8ffd9bb236a4dfc7694bbdac2b6ea1236b238582))
-    - Avoid lossy string conversions ([`572d047`](https://github.com/aya-rs/aya/commit/572d047e37111b732be49ef3ad6fb16f70aa4063))
-    - Merge pull request #758 from aya-rs/map-fd-not-option ([`1d5f764`](https://github.com/aya-rs/aya/commit/1d5f764d07c06fa25167d1d4cf341913d4f0cd01))
-    - MapData::fd is non-optional ([`89bc255`](https://github.com/aya-rs/aya/commit/89bc255f1d14d72a61064b9b40b641b58f8970e0))
-    - Merge pull request #749 from dave-tucker/clang-format ([`8ce1c00`](https://github.com/aya-rs/aya/commit/8ce1c00ad8b4ac1362eaf24d99eafd848546c9d3))
-    - Add clang-format ([`0212400`](https://github.com/aya-rs/aya/commit/02124002c88d7a89d6c9afd89857c4c301e09801))
-    - Merge pull request #734 from aya-rs/reduce-slicing ([`d3513e7`](https://github.com/aya-rs/aya/commit/d3513e7010cdab04a3d8bb5c7e7518ff67548302))
-    - S/types.types[i]/*t/ where possible ([`dfb6020`](https://github.com/aya-rs/aya/commit/dfb6020a1dc1d0ee28426bd9e3086dd449f643f7))
-    - Merge pull request #725 from dave-tucker/enum64 ([`2a55fc7`](https://github.com/aya-rs/aya/commit/2a55fc7bd3a15340b5b644d668f3a387bbdb09d3))
-    - Aya, aya-obj: Implement ENUM64 fixups ([`e38e256`](https://github.com/aya-rs/aya/commit/e38e2566e3393034b37c299e50c6a4b70d51ad1d))
-    - Merge pull request #731 from dave-tucker/noclone-btf ([`e210012`](https://github.com/aya-rs/aya/commit/e21001226fc05840867f43f6a4455a4c919e3b91))
-    - Mutate BTF in-place without clone ([`098d436`](https://github.com/aya-rs/aya/commit/098d4364bd0fb8551f0515cb84afda6aff23ed7f))
-    - Merge pull request #726 from aya-rs/btf-iter-alloc ([`761e4dd`](https://github.com/aya-rs/aya/commit/761e4ddbe3abf8b9177ebd6984465fe66696728a))
-    - Use Self instead of restating the type ([`826e0e5`](https://github.com/aya-rs/aya/commit/826e0e5050e9bf9e0cdff6d2a20c1169820d0e57))
-    - Avoid multiple vector allocations ([`2a054d7`](https://github.com/aya-rs/aya/commit/2a054d76ae167e7c2a6b4bfb1cf51770f93d394a))
-    - Merge pull request #721 from dave-tucker/fix-funcinfo ([`1979da9`](https://github.com/aya-rs/aya/commit/1979da92a722bacd9c984865a4c7108e22fb618f))
-    - Fix (func|line)_info multiple progs in section ([`79ea64c`](https://github.com/aya-rs/aya/commit/79ea64ca7fd3cc1b17573b539fd8fa8e76644beb))
-    - Merge pull request #720 from dave-tucker/programsection-noname ([`e915379`](https://github.com/aya-rs/aya/commit/e9153792f1c18caa5899edc7c05487eb291415a4))
-    - Remove name from ProgramSection ([`cca9b8f`](https://github.com/aya-rs/aya/commit/cca9b8f1a7e345a39d852bd18a43974871d3ed4b))
-    - Merge pull request #711 from dave-tucker/sleepable ([`77e9603`](https://github.com/aya-rs/aya/commit/77e9603976b58491427df049a163e1945bc0bf27))
-    - Propagate sleepable into ProgramSection ([`677e7bd`](https://github.com/aya-rs/aya/commit/677e7bda4a826aca858311670d1592162b682dff))
-    - Merge pull request #413 from dave-tucker/fix-names-once-and-for-all ([`e833a71`](https://github.com/aya-rs/aya/commit/e833a71b022b39fa7c7a904b74ef0c55ff7c19ee))
-    - Merge pull request #704 from aya-rs/better-panic ([`868a9b0`](https://github.com/aya-rs/aya/commit/868a9b00b3701a4e035dc1d70cac934ef836655b))
-    - Find programs using the symbol table ([`bf7fdff`](https://github.com/aya-rs/aya/commit/bf7fdff1cef28961f096d1c1e00181e0a0c2d14e))
-    - Better panic messages ([`17f25a6`](https://github.com/aya-rs/aya/commit/17f25a67934ad10443a4fbb62a563b5f6edcaa5f))
-    - Merge pull request #699 from aya-rs/cache-again-god-damn-it ([`e95f76a`](https://github.com/aya-rs/aya/commit/e95f76a5b348070dd6833d37ea16db04f6afa612))
-    - Do not escape newlines on Err(LoadError).unwrap() ([`8961be9`](https://github.com/aya-rs/aya/commit/8961be95268d2a4464ef75b0898cf07f9ba44470))
-    - Merge pull request #667 from vadorovsky/workspace-dependencies ([`f554d42`](https://github.com/aya-rs/aya/commit/f554d421053bc34266afbf8e00b28705ab4b41d2))
-    - Define dependencies on the workspace level ([`96fa08b`](https://github.com/aya-rs/aya/commit/96fa08bd82233268154edf30b106876f5a4f0e30))
-    - Merge pull request #665 from aya-rs/dead-code-rm ([`893ab76`](https://github.com/aya-rs/aya/commit/893ab76afaa9f729967eec47cc211f0a46f6268e))
-    - Avoid an allocation ([`6f2a8c8`](https://github.com/aya-rs/aya/commit/6f2a8c8a5c47098fb5e5a75ecebdff493d486c97))
-    - Remove dead code ([`d71d1e1`](https://github.com/aya-rs/aya/commit/d71d1e199382379036dc4760e4edbd5e637e07c3))
-    - Merge pull request #656 from aya-rs/kernel-version-fml ([`232cd45`](https://github.com/aya-rs/aya/commit/232cd45e41031060238d37fc7f08eb3d63fa2eeb))
-    - Replace matches with assert_matches ([`961f45d`](https://github.com/aya-rs/aya/commit/961f45da37616b912d2d4ed594036369f3f8285b))
-    - Merge pull request #650 from aya-rs/test-cleanup ([`61608e6`](https://github.com/aya-rs/aya/commit/61608e64583f9dc599eef9b8db098f38a765b285))
-    - Run tests with powerset of features ([`8e9712a`](https://github.com/aya-rs/aya/commit/8e9712ac024cbc05dfe8ba09a9dd725e56e34a51))
-    - Merge pull request #648 from aya-rs/clippy-more ([`a840a17`](https://github.com/aya-rs/aya/commit/a840a17308c1c27867e67baa62942738c5bd2caf))
-    - Clippy over tests and integration-ebpf ([`e621a09`](https://github.com/aya-rs/aya/commit/e621a09181d0a5ddb6289d8b13d4b89a71de63f1))
-    - Merge pull request #643 from aya-rs/procfs ([`6e9aba5`](https://github.com/aya-rs/aya/commit/6e9aba55fe8d23aa337b29a1cab890bb54816068))
-    - Remove verifier log special case ([`b5ebcb7`](https://github.com/aya-rs/aya/commit/b5ebcb7cc5fd0f719567b97f682a0ea0f8e0dc13))
-    - Merge pull request #641 from aya-rs/logger-messages-plz ([`4c0983b`](https://github.com/aya-rs/aya/commit/4c0983bca962e0e9b2711805ae7fbc6b53457c34))
-    - Hide details of VerifierLog ([`6b94b20`](https://github.com/aya-rs/aya/commit/6b94b2080dc4c122954beea814b2a1a4569e9aa3))
-    - Use procfs crate for kernel version parsing ([`b611038`](https://github.com/aya-rs/aya/commit/b611038d5b41a45ca70553550dbdef9aa1fd117c))
-    - Merge pull request #642 from aya-rs/less-strings ([`32be47a`](https://github.com/aya-rs/aya/commit/32be47a23b94902caadcc7bb1612adbd18318eca))
-    - Don't allocate static strings ([`27120b3`](https://github.com/aya-rs/aya/commit/27120b328aac5f992eed98b03216a9880a381749))
-    - Merge pull request #635 from marysaka/misc/aya-obj-enum-public ([`5c86b7e`](https://github.com/aya-rs/aya/commit/5c86b7ee950762d1cc37fc39c788e670869db231))
-    - Aya-obj: Make it possible to externally assemble BtfEnum ([`d9dfd94`](https://github.com/aya-rs/aya/commit/d9dfd94f29be8c28b7fe0ef4ab560db49f7514fb))
-    - Merge pull request #531 from dave-tucker/probe-cookie ([`bc0d021`](https://github.com/aya-rs/aya/commit/bc0d02143f5bc6103cca27d5f0c7a40beacd0668))
-    - Make Features part of the public API ([`47f764c`](https://github.com/aya-rs/aya/commit/47f764c19185a69a00f3925239797caa98cd5afe))
-    - Merge pull request #632 from marysaka/feat/global-data-optional ([`b2737d5`](https://github.com/aya-rs/aya/commit/b2737d5b0d18ce09202ca9eb2ce772b1144ea6b8))
-    - Allow global value to be optional ([`93435fc`](https://github.com/aya-rs/aya/commit/93435fc85400aa036f3890c43c78c9c9eb4baa96))
-    - Merge pull request #626 from aya-rs/dependabot/cargo/hashbrown-0.14 ([`26c6b92`](https://github.com/aya-rs/aya/commit/26c6b92ef1d58d0703a4a020db02dca65911456c))
-    - Update hashbrown requirement from 0.13 to 0.14 ([`f5f8083`](https://github.com/aya-rs/aya/commit/f5f8083441afd2daed9344fc2031878d574efaf1))
-    - Merge pull request #623 from aya-rs/dependabot/cargo/rbpf-0.2.0 ([`53ec1f2`](https://github.com/aya-rs/aya/commit/53ec1f23ea4efe7c686a6a4fb8bb166c8d444dc8))
-    - Update rbpf requirement from 0.1.0 to 0.2.0 ([`fa3dd4b`](https://github.com/aya-rs/aya/commit/fa3dd4bef252566aa26577a0d42b2ff59ac2ff2a))
-    - Merge pull request #563 from marysaka/fix/reloc-less-strict ([`85ad019`](https://github.com/aya-rs/aya/commit/85ad0197e0e0e30c99f3af63584f9c569b752a50))
-    - Make relocations less strict ([`35eaa50`](https://github.com/aya-rs/aya/commit/35eaa50736d9e894eb5122b1070afd7b0442eae6))
-    - Merge pull request #602 from marysaka/fix/btf-reloc-all-functions ([`3a9a54f`](https://github.com/aya-rs/aya/commit/3a9a54fd9b2f69e2427accbe0451761ecc537197))
-    - Merge pull request #616 from nak3/fix-bump ([`3211d2c`](https://github.com/aya-rs/aya/commit/3211d2c92801d8208c76856cb271f2b7772a0313))
-    - Apply BTF relocations to all functions ([`c4e721f`](https://github.com/aya-rs/aya/commit/c4e721f3d334a7c2e5e6d6cd6f4ade0f1334be72))
-    - [codegen] Update libbpf to f7eb43b90f4c8882edf6354f8585094f8f3aade0 ([`0bc886f`](https://github.com/aya-rs/aya/commit/0bc886f1634443d202e24f56cb74d3dce2e66e37))
-    - Merge pull request #585 from probulate/tag-len-value ([`5165bf2`](https://github.com/aya-rs/aya/commit/5165bf2f99cdc228122bdab505c2059723e95a9f))
-    - Merge pull request #605 from marysaka/fix/global-data-reloc-ancient-kernels ([`9c437aa`](https://github.com/aya-rs/aya/commit/9c437aafd96bebc5c90fdc7f370b5415174b1019))
-    - Merge pull request #604 from marysaka/fix/section-kind-from-str ([`3a9058e`](https://github.com/aya-rs/aya/commit/3a9058e7625b56ac26d6bb592dd4c3a93c61d6b0))
-    - Do not create data maps on kernel without global data support ([`591e212`](https://github.com/aya-rs/aya/commit/591e21267a9bc9adca9818095de5a695cee7ee9b))
-    - Fix ProgramSection::from_str for bss and rodata sections ([`18b3d75`](https://github.com/aya-rs/aya/commit/18b3d75d096e3c90f8c5b2f7292637a3369f96a6))
-    - Build tests with all features ([`4e2f832`](https://github.com/aya-rs/aya/commit/4e2f8322cc6ee7ef06a1d5718405964e8da14d18))
-    - Move program's functions to the same map ([`9e1109b`](https://github.com/aya-rs/aya/commit/9e1109b3ce70a3668771bd11a7fda101eec3ab93))
-    - Merge pull request #597 from nak3/test-clippy ([`7cd1c64`](https://github.com/aya-rs/aya/commit/7cd1c642e35d271c75eb1e9d65988e539a90f2bf))
-    - Drop unnecessary mut ([`e67025b`](https://github.com/aya-rs/aya/commit/e67025b66f08592bb7e9a3273d56eb5669b16d90))
-    - Merge pull request #577 from aya-rs/dependabot/cargo/object-0.31 ([`deb054a`](https://github.com/aya-rs/aya/commit/deb054afa45cfb9ffb7b213f34fc549c9503c0dd))
-    - Merge pull request #545 from epompeii/lsm_sleepable ([`120b59d`](https://github.com/aya-rs/aya/commit/120b59dd2e42805cf5880ada8f1bd0ba5faf4a44))
-    - Update object requirement from 0.30 to 0.31 ([`4c78f7f`](https://github.com/aya-rs/aya/commit/4c78f7f1a014cf54d54c805233a0f29eb1ca5eeb))
-    - Merge pull request #586 from probulate/no-std-inversion ([`45efa63`](https://github.com/aya-rs/aya/commit/45efa6384ffbcff82ca55e151c446d930147abf0))
-    - Flip feature "no_std" to feature "std" ([`33a0a2b`](https://github.com/aya-rs/aya/commit/33a0a2b604e77b63b771b9d0e167c894793492b5))
-    - Merge branch 'aya-rs:main' into lsm_sleepable ([`1f2006b`](https://github.com/aya-rs/aya/commit/1f2006bfde865cc4308643b21d51cf4a8e69d6d4))
-    - Merge pull request #583 from 0xrawsec/fix-builtin-linkage ([`b2d5059`](https://github.com/aya-rs/aya/commit/b2d5059ac250b4017ba723e594292f0356c31811))
-    - - comment changed to be more precise - adapted test to be more readable ([`1464bdc`](https://github.com/aya-rs/aya/commit/1464bdc1d4393e1a4ab5cff3833f784444b1d175))
-    - Added memmove, memcmp to the list of function changed to BTF_FUNC_STATIC ([`72c1572`](https://github.com/aya-rs/aya/commit/72c15721781f758c65cd4b94def8e907e42d8c35))
-    - Fixed indent ([`a51c9bc`](https://github.com/aya-rs/aya/commit/a51c9bc532f101302a38cd866b40a5014fa61c54))
-    - Removed useless line break and comments ([`5b4fc9e`](https://github.com/aya-rs/aya/commit/5b4fc9ea93f32da4c58be4b261905b883c9ea20b))
-    - Add debug messages ([`74bc754`](https://github.com/aya-rs/aya/commit/74bc754862df5571a4fafb18260bc1e5c4acd9b2))
-    - Merge pull request #582 from marysaka/feature/no-kern-read-sanitizer ([`b5c2928`](https://github.com/aya-rs/aya/commit/b5c2928b0e0d20c48157a5862f0d2c3dd5dbb784))
-    - Add sanitize code for kernels without bpf_probe_read_kernel ([`1132b6e`](https://github.com/aya-rs/aya/commit/1132b6e01b86856aa1fddf179fcc7e3825e79406))
-    - Fixed BTF linkage of memset and memcpy to static ([`4e41da6`](https://github.com/aya-rs/aya/commit/4e41da6a86418e4e2a9241b42301a1abe38e7372))
-    - Merge pull request #581 from marysaka/fix/datasec-struct-conversion ([`858f77b`](https://github.com/aya-rs/aya/commit/858f77bf2cfb457765b7deb81ba75fb706c71954))
-    - Fix DATASEC to STRUCT conversion ([`4e33fa0`](https://github.com/aya-rs/aya/commit/4e33fa011e87cdc2fc59025b9e531b4872651cd0))
-    - Merge pull request #572 from alessandrod/reloc-fixes ([`542ada3`](https://github.com/aya-rs/aya/commit/542ada3fe7f9d4d06542253361acc5fadce3f24b))
-    - Support relocations across multiple text sections + fixes ([`93ac3e9`](https://github.com/aya-rs/aya/commit/93ac3e94bcb47864670c124dfe00e16ed2ab6f5e))
-    - Change two drain() calls to into_iter() ([`b25a089`](https://github.com/aya-rs/aya/commit/b25a08981986cac4f511433d165560576a8c9856))
-    - Aya, aya-obj: refactor map relocations ([`401ea5e`](https://github.com/aya-rs/aya/commit/401ea5e8482ece34b6c88de85ec474bdfc577fd4))
-    - Rework `maps` section parsing ([`5c4f1d6`](https://github.com/aya-rs/aya/commit/5c4f1d69a60e0c5324512a7cfbc4467b7f5d0bca))
-    - Review ([`85714d5`](https://github.com/aya-rs/aya/commit/85714d5cf3622da49d1442c34caa63451d9efe48))
-    - Macro ([`6dfb9d8`](https://github.com/aya-rs/aya/commit/6dfb9d82af9c178f4effd7a0c9095442816a014c))
-    - Obj ([`6a25d4d`](https://github.com/aya-rs/aya/commit/6a25d4ddec42e3408bd823fccc6e64c33575bc5c))
-    - Fix compilation with nightly ([`dfbe120`](https://github.com/aya-rs/aya/commit/dfbe1207c1bbd105d1daa9b08cec0e9803b5464e))
-    - Merge pull request #537 from aya-rs/codegen ([`8684a57`](https://github.com/aya-rs/aya/commit/8684a5783db6953b28e42bbbcdc52514fc4e6c37))
-    - [codegen] Update libbpf to a41e6ef3251cba858021b90c33abb9efdb17f575Update libbpf to a41e6ef3251cba858021b90c33abb9efdb17f575 ([`24f15ea`](https://github.com/aya-rs/aya/commit/24f15ea25f413633f8c498ee5be046e797acebae))
-    - More discrete feature logging ([`7479c1d`](https://github.com/aya-rs/aya/commit/7479c1dd6c1356bddb0401dbeea65618674524c9))
-    - Make features a lazy_static ([`ce22ca6`](https://github.com/aya-rs/aya/commit/ce22ca668f3e7c0f9832d28370457204537d2e50))
-    - Merge pull request #519 from dave-tucker/frags ([`bc83f20`](https://github.com/aya-rs/aya/commit/bc83f208b11542607e02751126a68b1ca568873b))
-    - Add multibuffer support for XDP ([`376c486`](https://github.com/aya-rs/aya/commit/376c48640033fdbf8b5199641f353587273f8a32))
-    - Add support for multibuffer programs ([`a18693b`](https://github.com/aya-rs/aya/commit/a18693b42dc986bde06b07540e261ecac59eef24))
-    - Merge pull request #453 from alessandrod/btf-kind-enum64 ([`e8e2767`](https://github.com/aya-rs/aya/commit/e8e276730e7351888a71f1196ca1bfbc06c22432))
-    - Btf: add support for BTF_KIND_ENUM64 ([`9a6f814`](https://github.com/aya-rs/aya/commit/9a6f8143a1a4c5c88a373701d74d96596c75242f))
-    - Merge pull request #501 from alessandrod/fix-enum32-relocs ([`f81b1b9`](https://github.com/aya-rs/aya/commit/f81b1b9f3ec1de5241d8882da56f1d8d7c22d994))
-    - Btf: fix relocations for signed enums (32 bits) ([`4482db4`](https://github.com/aya-rs/aya/commit/4482db42d86c657826efe80f484f57a601ed2f38))
-    - Btf: switch ComputedRelocationValue::value to u64 ([`d6b976c`](https://github.com/aya-rs/aya/commit/d6b976c6f1f6163680c179502f4f454d0cec747e))
-    - Fix lints ([`9f4ef6f`](https://github.com/aya-rs/aya/commit/9f4ef6f67df397c7e243435ccb3bdd517fd467cf))
-    - Merge pull request #487 from vadorovsky/new-map-types ([`42c4a8b`](https://github.com/aya-rs/aya/commit/42c4a8be7c502d7e7508c636f7c1cb28296c26b8))
-    - Add new map types ([`3d03c8a`](https://github.com/aya-rs/aya/commit/3d03c8a8e0a9033be8c1ab020129db7790cc7493))
-    - Merge pull request #483 from aya-rs/codegen ([`0399991`](https://github.com/aya-rs/aya/commit/03999913833ad576d9ba7d1c0123703f49b340a5))
-    - Update `BPF_MAP_TYPE_CGROUP_STORAGE` name to `BPF_MAP_TYPE_CGRP_STORAGE` ([`cb28533`](https://github.com/aya-rs/aya/commit/cb28533e2f9eb0b2cd80f4bf9515cdec31763749))
-    - [codegen] Update libbpf to 3423d5e7cdab356d115aef7f987b4a1098ede448 ([`5d13fd5`](https://github.com/aya-rs/aya/commit/5d13fd5acaa90efedb76d371b69431ac9a262fdd))
-    - Merge pull request #475 from yesh0/aya-obj ([`897957a`](https://github.com/aya-rs/aya/commit/897957ac84370cd1ee463bdf2ff4859333b41012))
-    - Update documentation and versioning info ([`9c451a3`](https://github.com/aya-rs/aya/commit/9c451a3357317405dd8e2e4df7d006cee943adcc))
-    - Add documentation on program names ([`772af17`](https://github.com/aya-rs/aya/commit/772af170aea2feccb5e98cc84125e9e31b9fbe9a))
-    - Fix rustfmt diffs and typos ([`9ec3447`](https://github.com/aya-rs/aya/commit/9ec3447e891ca770a65f8ff9b71884f25530f515))
-    - Add no_std feature ([`30f1fab`](https://github.com/aya-rs/aya/commit/30f1fabc05654e8d11dd2648767895123c141c3b))
-    - Add integration tests against rbpf ([`311ead6`](https://github.com/aya-rs/aya/commit/311ead6760ce53e9503af00391e6631f7387ab4a))
-    - Add basic documentation to public members ([`e52497c`](https://github.com/aya-rs/aya/commit/e52497cb9c02123ae450ca36fb6f898d24b25c4b))
-    - Migrate aya::obj into a separate crate ([`ac49827`](https://github.com/aya-rs/aya/commit/ac49827e204801079be2b87160a795ef412bd6cb))
-    - Migrate bindgen destination ([`81bc307`](https://github.com/aya-rs/aya/commit/81bc307dce452f0aacbfbe8c304089d11ddd8c5e))
+    - Release aya-obj v0.1.0, aya v0.12.0, safety bump aya-log v0.2.0 ([`0e99fa0`](https://github.com/vadorovsky/aya/commit/0e99fa0f340b2fb2e0da3b330aa6555322a77eec))
+    - Merge pull request #891 from dave-tucker/changelog ([`431ce23`](https://github.com/vadorovsky/aya/commit/431ce23f27ef5c36a6b38c73b38f23b1cf007900))
+    - Add CHANGELOG ([`72e8aab`](https://github.com/vadorovsky/aya/commit/72e8aab6c8be8663c5b6ff6b606a51debf512f7d))
+    - Appease new nightly clippy lints ([`3369169`](https://github.com/vadorovsky/aya/commit/3369169aaca6510a47318fc29bbdb801b60b1c21))
+    - Merge pull request #882 from dave-tucker/metadata ([`0fadd69`](https://github.com/vadorovsky/aya/commit/0fadd695377b8a3f0d9a3af3bc8140f0f1bed8d2))
+    - Use the cargo workspace package table ([`b3e7ef7`](https://github.com/vadorovsky/aya/commit/b3e7ef741c5b8d09fc7dc8302576f8174be75ff4))
+    - Merge pull request #885 from dave-tucker/nightly-up ([`2d72197`](https://github.com/vadorovsky/aya/commit/2d721971cfae39e168f0dc4dac1f219490c16fbf))
+    - Appease clippy unused imports ([`770a95e`](https://github.com/vadorovsky/aya/commit/770a95e0779a6a943c2f5439334fa208ac2ca7e6))
+    - Handle lack of match of enum variants correctly ([`c05a3b6`](https://github.com/vadorovsky/aya/commit/c05a3b69b7a94036c380bd64c6de51377987077c))
+    - Don't parse labels as programs ([`35e21ae`](https://github.com/vadorovsky/aya/commit/35e21ae0079d38e90d90fc85d29580c8b44b16d4))
+    - Merge pull request #812 from tamird/redundant-cargo ([`715d490`](https://github.com/vadorovsky/aya/commit/715d49022eefb152ef8817c730d9eac2b3e6d66f))
+    - Remove redundant keys ([`cc48523`](https://github.com/vadorovsky/aya/commit/cc48523347c2be5520779ef8eeadc6d3a68649d0))
+    - Merge pull request #797 from aya-rs/rustfmt-group-imports ([`373fb7b`](https://github.com/vadorovsky/aya/commit/373fb7bf06ba80ee4c120d8c112f5e810204c472))
+    - Group_imports = "StdExternalCrate" ([`d16e607`](https://github.com/vadorovsky/aya/commit/d16e607fd4b6258b516913071fdacafeb2bbbff9))
+    - Merge pull request #527 from Tuetuopay/xdpmaps ([`7f9ce06`](https://github.com/vadorovsky/aya/commit/7f9ce062f4b8b5cefbe07d8ea47363266f7eacd1))
+    - Aya, bpf: misc fixes following review comments ([`579e3ce`](https://github.com/vadorovsky/aya/commit/579e3cee22ae8e932efb0894ca7fd9ceb91ca7fa))
+    - Make maps work on kernels not supporting ProgIds ([`00dc7a5`](https://github.com/vadorovsky/aya/commit/00dc7a5bd4468b7d86d7f167a49e78d89016e2ac))
+    - Add support for map-bound XDP programs ([`139f382`](https://github.com/vadorovsky/aya/commit/139f3826383daba9a10dc7aacc079f31d28980fc))
+    - Merge pull request #770 from aya-rs/mapfd-is-owned ([`41d01f6`](https://github.com/vadorovsky/aya/commit/41d01f638bc81306749dd0f6aa7d2a677f4de27b))
+    - `MapFd` and `SockMapFd` are owned ([`f415926`](https://github.com/vadorovsky/aya/commit/f41592663cda156082255b93db145cfdd19378e5))
+    - Merge pull request #766 from aya-rs/obj-better-sense ([`e9690df`](https://github.com/vadorovsky/aya/commit/e9690df834b502575321ba32fd09f93eaacb03fa))
+    - Reduce indirection in section parsing ([`c139627`](https://github.com/vadorovsky/aya/commit/c139627f8f180638b786b5e3cd48b8473d96fe56))
+    - Merge pull request #742 from aya-rs/avoid-utf-assumption ([`8ffd9bb`](https://github.com/vadorovsky/aya/commit/8ffd9bb236a4dfc7694bbdac2b6ea1236b238582))
+    - Avoid lossy string conversions ([`572d047`](https://github.com/vadorovsky/aya/commit/572d047e37111b732be49ef3ad6fb16f70aa4063))
+    - Merge pull request #758 from aya-rs/map-fd-not-option ([`1d5f764`](https://github.com/vadorovsky/aya/commit/1d5f764d07c06fa25167d1d4cf341913d4f0cd01))
+    - MapData::fd is non-optional ([`89bc255`](https://github.com/vadorovsky/aya/commit/89bc255f1d14d72a61064b9b40b641b58f8970e0))
+    - Merge pull request #749 from dave-tucker/clang-format ([`8ce1c00`](https://github.com/vadorovsky/aya/commit/8ce1c00ad8b4ac1362eaf24d99eafd848546c9d3))
+    - Add clang-format ([`0212400`](https://github.com/vadorovsky/aya/commit/02124002c88d7a89d6c9afd89857c4c301e09801))
+    - Merge pull request #734 from aya-rs/reduce-slicing ([`d3513e7`](https://github.com/vadorovsky/aya/commit/d3513e7010cdab04a3d8bb5c7e7518ff67548302))
+    - S/types.types[i]/*t/ where possible ([`dfb6020`](https://github.com/vadorovsky/aya/commit/dfb6020a1dc1d0ee28426bd9e3086dd449f643f7))
+    - Merge pull request #725 from dave-tucker/enum64 ([`2a55fc7`](https://github.com/vadorovsky/aya/commit/2a55fc7bd3a15340b5b644d668f3a387bbdb09d3))
+    - Aya, aya-obj: Implement ENUM64 fixups ([`e38e256`](https://github.com/vadorovsky/aya/commit/e38e2566e3393034b37c299e50c6a4b70d51ad1d))
+    - Merge pull request #731 from dave-tucker/noclone-btf ([`e210012`](https://github.com/vadorovsky/aya/commit/e21001226fc05840867f43f6a4455a4c919e3b91))
+    - Mutate BTF in-place without clone ([`098d436`](https://github.com/vadorovsky/aya/commit/098d4364bd0fb8551f0515cb84afda6aff23ed7f))
+    - Merge pull request #726 from aya-rs/btf-iter-alloc ([`761e4dd`](https://github.com/vadorovsky/aya/commit/761e4ddbe3abf8b9177ebd6984465fe66696728a))
+    - Use Self instead of restating the type ([`826e0e5`](https://github.com/vadorovsky/aya/commit/826e0e5050e9bf9e0cdff6d2a20c1169820d0e57))
+    - Avoid multiple vector allocations ([`2a054d7`](https://github.com/vadorovsky/aya/commit/2a054d76ae167e7c2a6b4bfb1cf51770f93d394a))
+    - Merge pull request #721 from dave-tucker/fix-funcinfo ([`1979da9`](https://github.com/vadorovsky/aya/commit/1979da92a722bacd9c984865a4c7108e22fb618f))
+    - Fix (func|line)_info multiple progs in section ([`79ea64c`](https://github.com/vadorovsky/aya/commit/79ea64ca7fd3cc1b17573b539fd8fa8e76644beb))
+    - Merge pull request #720 from dave-tucker/programsection-noname ([`e915379`](https://github.com/vadorovsky/aya/commit/e9153792f1c18caa5899edc7c05487eb291415a4))
+    - Remove name from ProgramSection ([`cca9b8f`](https://github.com/vadorovsky/aya/commit/cca9b8f1a7e345a39d852bd18a43974871d3ed4b))
+    - Merge pull request #711 from dave-tucker/sleepable ([`77e9603`](https://github.com/vadorovsky/aya/commit/77e9603976b58491427df049a163e1945bc0bf27))
+    - Propagate sleepable into ProgramSection ([`677e7bd`](https://github.com/vadorovsky/aya/commit/677e7bda4a826aca858311670d1592162b682dff))
+    - Merge pull request #413 from dave-tucker/fix-names-once-and-for-all ([`e833a71`](https://github.com/vadorovsky/aya/commit/e833a71b022b39fa7c7a904b74ef0c55ff7c19ee))
+    - Merge pull request #704 from aya-rs/better-panic ([`868a9b0`](https://github.com/vadorovsky/aya/commit/868a9b00b3701a4e035dc1d70cac934ef836655b))
+    - Find programs using the symbol table ([`bf7fdff`](https://github.com/vadorovsky/aya/commit/bf7fdff1cef28961f096d1c1e00181e0a0c2d14e))
+    - Better panic messages ([`17f25a6`](https://github.com/vadorovsky/aya/commit/17f25a67934ad10443a4fbb62a563b5f6edcaa5f))
+    - Merge pull request #699 from aya-rs/cache-again-god-damn-it ([`e95f76a`](https://github.com/vadorovsky/aya/commit/e95f76a5b348070dd6833d37ea16db04f6afa612))
+    - Do not escape newlines on Err(LoadError).unwrap() ([`8961be9`](https://github.com/vadorovsky/aya/commit/8961be95268d2a4464ef75b0898cf07f9ba44470))
+    - Merge pull request #667 from vadorovsky/workspace-dependencies ([`f554d42`](https://github.com/vadorovsky/aya/commit/f554d421053bc34266afbf8e00b28705ab4b41d2))
+    - Define dependencies on the workspace level ([`96fa08b`](https://github.com/vadorovsky/aya/commit/96fa08bd82233268154edf30b106876f5a4f0e30))
+    - Merge pull request #665 from aya-rs/dead-code-rm ([`893ab76`](https://github.com/vadorovsky/aya/commit/893ab76afaa9f729967eec47cc211f0a46f6268e))
+    - Avoid an allocation ([`6f2a8c8`](https://github.com/vadorovsky/aya/commit/6f2a8c8a5c47098fb5e5a75ecebdff493d486c97))
+    - Remove dead code ([`d71d1e1`](https://github.com/vadorovsky/aya/commit/d71d1e199382379036dc4760e4edbd5e637e07c3))
+    - Merge pull request #656 from aya-rs/kernel-version-fml ([`232cd45`](https://github.com/vadorovsky/aya/commit/232cd45e41031060238d37fc7f08eb3d63fa2eeb))
+    - Replace matches with assert_matches ([`961f45d`](https://github.com/vadorovsky/aya/commit/961f45da37616b912d2d4ed594036369f3f8285b))
+    - Merge pull request #650 from aya-rs/test-cleanup ([`61608e6`](https://github.com/vadorovsky/aya/commit/61608e64583f9dc599eef9b8db098f38a765b285))
+    - Run tests with powerset of features ([`8e9712a`](https://github.com/vadorovsky/aya/commit/8e9712ac024cbc05dfe8ba09a9dd725e56e34a51))
+    - Merge pull request #648 from aya-rs/clippy-more ([`a840a17`](https://github.com/vadorovsky/aya/commit/a840a17308c1c27867e67baa62942738c5bd2caf))
+    - Clippy over tests and integration-ebpf ([`e621a09`](https://github.com/vadorovsky/aya/commit/e621a09181d0a5ddb6289d8b13d4b89a71de63f1))
+    - Merge pull request #643 from aya-rs/procfs ([`6e9aba5`](https://github.com/vadorovsky/aya/commit/6e9aba55fe8d23aa337b29a1cab890bb54816068))
+    - Remove verifier log special case ([`b5ebcb7`](https://github.com/vadorovsky/aya/commit/b5ebcb7cc5fd0f719567b97f682a0ea0f8e0dc13))
+    - Merge pull request #641 from aya-rs/logger-messages-plz ([`4c0983b`](https://github.com/vadorovsky/aya/commit/4c0983bca962e0e9b2711805ae7fbc6b53457c34))
+    - Hide details of VerifierLog ([`6b94b20`](https://github.com/vadorovsky/aya/commit/6b94b2080dc4c122954beea814b2a1a4569e9aa3))
+    - Use procfs crate for kernel version parsing ([`b611038`](https://github.com/vadorovsky/aya/commit/b611038d5b41a45ca70553550dbdef9aa1fd117c))
+    - Merge pull request #642 from aya-rs/less-strings ([`32be47a`](https://github.com/vadorovsky/aya/commit/32be47a23b94902caadcc7bb1612adbd18318eca))
+    - Don't allocate static strings ([`27120b3`](https://github.com/vadorovsky/aya/commit/27120b328aac5f992eed98b03216a9880a381749))
+    - Merge pull request #635 from marysaka/misc/aya-obj-enum-public ([`5c86b7e`](https://github.com/vadorovsky/aya/commit/5c86b7ee950762d1cc37fc39c788e670869db231))
+    - Aya-obj: Make it possible to externally assemble BtfEnum ([`d9dfd94`](https://github.com/vadorovsky/aya/commit/d9dfd94f29be8c28b7fe0ef4ab560db49f7514fb))
+    - Merge pull request #531 from dave-tucker/probe-cookie ([`bc0d021`](https://github.com/vadorovsky/aya/commit/bc0d02143f5bc6103cca27d5f0c7a40beacd0668))
+    - Make Features part of the public API ([`47f764c`](https://github.com/vadorovsky/aya/commit/47f764c19185a69a00f3925239797caa98cd5afe))
+    - Merge pull request #632 from marysaka/feat/global-data-optional ([`b2737d5`](https://github.com/vadorovsky/aya/commit/b2737d5b0d18ce09202ca9eb2ce772b1144ea6b8))
+    - Allow global value to be optional ([`93435fc`](https://github.com/vadorovsky/aya/commit/93435fc85400aa036f3890c43c78c9c9eb4baa96))
+    - Merge pull request #626 from aya-rs/dependabot/cargo/hashbrown-0.14 ([`26c6b92`](https://github.com/vadorovsky/aya/commit/26c6b92ef1d58d0703a4a020db02dca65911456c))
+    - Update hashbrown requirement from 0.13 to 0.14 ([`f5f8083`](https://github.com/vadorovsky/aya/commit/f5f8083441afd2daed9344fc2031878d574efaf1))
+    - Merge pull request #623 from aya-rs/dependabot/cargo/rbpf-0.2.0 ([`53ec1f2`](https://github.com/vadorovsky/aya/commit/53ec1f23ea4efe7c686a6a4fb8bb166c8d444dc8))
+    - Update rbpf requirement from 0.1.0 to 0.2.0 ([`fa3dd4b`](https://github.com/vadorovsky/aya/commit/fa3dd4bef252566aa26577a0d42b2ff59ac2ff2a))
+    - Merge pull request #563 from marysaka/fix/reloc-less-strict ([`85ad019`](https://github.com/vadorovsky/aya/commit/85ad0197e0e0e30c99f3af63584f9c569b752a50))
+    - Make relocations less strict ([`35eaa50`](https://github.com/vadorovsky/aya/commit/35eaa50736d9e894eb5122b1070afd7b0442eae6))
+    - Merge pull request #602 from marysaka/fix/btf-reloc-all-functions ([`3a9a54f`](https://github.com/vadorovsky/aya/commit/3a9a54fd9b2f69e2427accbe0451761ecc537197))
+    - Merge pull request #616 from nak3/fix-bump ([`3211d2c`](https://github.com/vadorovsky/aya/commit/3211d2c92801d8208c76856cb271f2b7772a0313))
+    - Apply BTF relocations to all functions ([`c4e721f`](https://github.com/vadorovsky/aya/commit/c4e721f3d334a7c2e5e6d6cd6f4ade0f1334be72))
+    - [codegen] Update libbpf to f7eb43b90f4c8882edf6354f8585094f8f3aade0Update libbpf to f7eb43b90f4c8882edf6354f8585094f8f3aade0 ([`0bc886f`](https://github.com/vadorovsky/aya/commit/0bc886f1634443d202e24f56cb74d3dce2e66e37))
+    - Merge pull request #585 from probulate/tag-len-value ([`5165bf2`](https://github.com/vadorovsky/aya/commit/5165bf2f99cdc228122bdab505c2059723e95a9f))
+    - Merge pull request #605 from marysaka/fix/global-data-reloc-ancient-kernels ([`9c437aa`](https://github.com/vadorovsky/aya/commit/9c437aafd96bebc5c90fdc7f370b5415174b1019))
+    - Merge pull request #604 from marysaka/fix/section-kind-from-str ([`3a9058e`](https://github.com/vadorovsky/aya/commit/3a9058e7625b56ac26d6bb592dd4c3a93c61d6b0))
+    - Do not create data maps on kernel without global data support ([`591e212`](https://github.com/vadorovsky/aya/commit/591e21267a9bc9adca9818095de5a695cee7ee9b))
+    - Fix ProgramSection::from_str for bss and rodata sections ([`18b3d75`](https://github.com/vadorovsky/aya/commit/18b3d75d096e3c90f8c5b2f7292637a3369f96a6))
+    - Build tests with all features ([`4e2f832`](https://github.com/vadorovsky/aya/commit/4e2f8322cc6ee7ef06a1d5718405964e8da14d18))
+    - Move program's functions to the same map ([`9e1109b`](https://github.com/vadorovsky/aya/commit/9e1109b3ce70a3668771bd11a7fda101eec3ab93))
+    - Merge pull request #597 from nak3/test-clippy ([`7cd1c64`](https://github.com/vadorovsky/aya/commit/7cd1c642e35d271c75eb1e9d65988e539a90f2bf))
+    - Drop unnecessary mut ([`e67025b`](https://github.com/vadorovsky/aya/commit/e67025b66f08592bb7e9a3273d56eb5669b16d90))
+    - Merge pull request #577 from aya-rs/dependabot/cargo/object-0.31 ([`deb054a`](https://github.com/vadorovsky/aya/commit/deb054afa45cfb9ffb7b213f34fc549c9503c0dd))
+    - Merge pull request #545 from epompeii/lsm_sleepable ([`120b59d`](https://github.com/vadorovsky/aya/commit/120b59dd2e42805cf5880ada8f1bd0ba5faf4a44))
+    - Update object requirement from 0.30 to 0.31 ([`4c78f7f`](https://github.com/vadorovsky/aya/commit/4c78f7f1a014cf54d54c805233a0f29eb1ca5eeb))
+    - Merge pull request #586 from probulate/no-std-inversion ([`45efa63`](https://github.com/vadorovsky/aya/commit/45efa6384ffbcff82ca55e151c446d930147abf0))
+    - Flip feature "no_std" to feature "std" ([`33a0a2b`](https://github.com/vadorovsky/aya/commit/33a0a2b604e77b63b771b9d0e167c894793492b5))
+    - Merge branch 'aya-rs:main' into lsm_sleepable ([`1f2006b`](https://github.com/vadorovsky/aya/commit/1f2006bfde865cc4308643b21d51cf4a8e69d6d4))
+    - Merge pull request #583 from 0xrawsec/fix-builtin-linkage ([`b2d5059`](https://github.com/vadorovsky/aya/commit/b2d5059ac250b4017ba723e594292f0356c31811))
+    - - comment changed to be more precise - adapted test to be more readable ([`1464bdc`](https://github.com/vadorovsky/aya/commit/1464bdc1d4393e1a4ab5cff3833f784444b1d175))
+    - Added memmove, memcmp to the list of function changed to BTF_FUNC_STATIC ([`72c1572`](https://github.com/vadorovsky/aya/commit/72c15721781f758c65cd4b94def8e907e42d8c35))
+    - Fixed indent ([`a51c9bc`](https://github.com/vadorovsky/aya/commit/a51c9bc532f101302a38cd866b40a5014fa61c54))
+    - Removed useless line break and comments ([`5b4fc9e`](https://github.com/vadorovsky/aya/commit/5b4fc9ea93f32da4c58be4b261905b883c9ea20b))
+    - Add debug messages ([`74bc754`](https://github.com/vadorovsky/aya/commit/74bc754862df5571a4fafb18260bc1e5c4acd9b2))
+    - Merge pull request #582 from marysaka/feature/no-kern-read-sanitizer ([`b5c2928`](https://github.com/vadorovsky/aya/commit/b5c2928b0e0d20c48157a5862f0d2c3dd5dbb784))
+    - Add sanitize code for kernels without bpf_probe_read_kernel ([`1132b6e`](https://github.com/vadorovsky/aya/commit/1132b6e01b86856aa1fddf179fcc7e3825e79406))
+    - Fixed BTF linkage of memset and memcpy to static ([`4e41da6`](https://github.com/vadorovsky/aya/commit/4e41da6a86418e4e2a9241b42301a1abe38e7372))
+    - Merge pull request #581 from marysaka/fix/datasec-struct-conversion ([`858f77b`](https://github.com/vadorovsky/aya/commit/858f77bf2cfb457765b7deb81ba75fb706c71954))
+    - Fix DATASEC to STRUCT conversion ([`4e33fa0`](https://github.com/vadorovsky/aya/commit/4e33fa011e87cdc2fc59025b9e531b4872651cd0))
+    - Merge pull request #572 from alessandrod/reloc-fixes ([`542ada3`](https://github.com/vadorovsky/aya/commit/542ada3fe7f9d4d06542253361acc5fadce3f24b))
+    - Support relocations across multiple text sections + fixes ([`93ac3e9`](https://github.com/vadorovsky/aya/commit/93ac3e94bcb47864670c124dfe00e16ed2ab6f5e))
+    - Change two drain() calls to into_iter() ([`b25a089`](https://github.com/vadorovsky/aya/commit/b25a08981986cac4f511433d165560576a8c9856))
+    - Aya, aya-obj: refactor map relocations ([`401ea5e`](https://github.com/vadorovsky/aya/commit/401ea5e8482ece34b6c88de85ec474bdfc577fd4))
+    - Rework `maps` section parsing ([`5c4f1d6`](https://github.com/vadorovsky/aya/commit/5c4f1d69a60e0c5324512a7cfbc4467b7f5d0bca))
+    - Review ([`85714d5`](https://github.com/vadorovsky/aya/commit/85714d5cf3622da49d1442c34caa63451d9efe48))
+    - Macro ([`6dfb9d8`](https://github.com/vadorovsky/aya/commit/6dfb9d82af9c178f4effd7a0c9095442816a014c))
+    - Obj ([`6a25d4d`](https://github.com/vadorovsky/aya/commit/6a25d4ddec42e3408bd823fccc6e64c33575bc5c))
+    - Fix compilation with nightly ([`dfbe120`](https://github.com/vadorovsky/aya/commit/dfbe1207c1bbd105d1daa9b08cec0e9803b5464e))
+    - Merge pull request #537 from aya-rs/codegen ([`8684a57`](https://github.com/vadorovsky/aya/commit/8684a5783db6953b28e42bbbcdc52514fc4e6c37))
+    - [codegen] Update libbpf to a41e6ef3251cba858021b90c33abb9efdb17f575Update libbpf to a41e6ef3251cba858021b90c33abb9efdb17f575 ([`24f15ea`](https://github.com/vadorovsky/aya/commit/24f15ea25f413633f8c498ee5be046e797acebae))
+    - More discrete feature logging ([`7479c1d`](https://github.com/vadorovsky/aya/commit/7479c1dd6c1356bddb0401dbeea65618674524c9))
+    - Make features a lazy_static ([`ce22ca6`](https://github.com/vadorovsky/aya/commit/ce22ca668f3e7c0f9832d28370457204537d2e50))
+    - Merge pull request #519 from dave-tucker/frags ([`bc83f20`](https://github.com/vadorovsky/aya/commit/bc83f208b11542607e02751126a68b1ca568873b))
+    - Add multibuffer support for XDP ([`376c486`](https://github.com/vadorovsky/aya/commit/376c48640033fdbf8b5199641f353587273f8a32))
+    - Add support for multibuffer programs ([`a18693b`](https://github.com/vadorovsky/aya/commit/a18693b42dc986bde06b07540e261ecac59eef24))
+    - Merge pull request #453 from alessandrod/btf-kind-enum64 ([`e8e2767`](https://github.com/vadorovsky/aya/commit/e8e276730e7351888a71f1196ca1bfbc06c22432))
+    - Btf: add support for BTF_KIND_ENUM64 ([`9a6f814`](https://github.com/vadorovsky/aya/commit/9a6f8143a1a4c5c88a373701d74d96596c75242f))
+    - Merge pull request #501 from alessandrod/fix-enum32-relocs ([`f81b1b9`](https://github.com/vadorovsky/aya/commit/f81b1b9f3ec1de5241d8882da56f1d8d7c22d994))
+    - Btf: fix relocations for signed enums (32 bits) ([`4482db4`](https://github.com/vadorovsky/aya/commit/4482db42d86c657826efe80f484f57a601ed2f38))
+    - Btf: switch ComputedRelocationValue::value to u64 ([`d6b976c`](https://github.com/vadorovsky/aya/commit/d6b976c6f1f6163680c179502f4f454d0cec747e))
+    - Fix lints ([`9f4ef6f`](https://github.com/vadorovsky/aya/commit/9f4ef6f67df397c7e243435ccb3bdd517fd467cf))
+    - Merge pull request #487 from vadorovsky/new-map-types ([`42c4a8b`](https://github.com/vadorovsky/aya/commit/42c4a8be7c502d7e7508c636f7c1cb28296c26b8))
+    - Add new map types ([`3d03c8a`](https://github.com/vadorovsky/aya/commit/3d03c8a8e0a9033be8c1ab020129db7790cc7493))
+    - Merge pull request #483 from aya-rs/codegen ([`0399991`](https://github.com/vadorovsky/aya/commit/03999913833ad576d9ba7d1c0123703f49b340a5))
+    - Update `BPF_MAP_TYPE_CGROUP_STORAGE` name to `BPF_MAP_TYPE_CGRP_STORAGE` ([`cb28533`](https://github.com/vadorovsky/aya/commit/cb28533e2f9eb0b2cd80f4bf9515cdec31763749))
+    - [codegen] Update libbpf to 3423d5e7cdab356d115aef7f987b4a1098ede448Update libbpf to 3423d5e7cdab356d115aef7f987b4a1098ede448 ([`5d13fd5`](https://github.com/vadorovsky/aya/commit/5d13fd5acaa90efedb76d371b69431ac9a262fdd))
+    - Merge pull request #475 from yesh0/aya-obj ([`897957a`](https://github.com/vadorovsky/aya/commit/897957ac84370cd1ee463bdf2ff4859333b41012))
+    - Update documentation and versioning info ([`9c451a3`](https://github.com/vadorovsky/aya/commit/9c451a3357317405dd8e2e4df7d006cee943adcc))
+    - Add documentation on program names ([`772af17`](https://github.com/vadorovsky/aya/commit/772af170aea2feccb5e98cc84125e9e31b9fbe9a))
+    - Fix rustfmt diffs and typos ([`9ec3447`](https://github.com/vadorovsky/aya/commit/9ec3447e891ca770a65f8ff9b71884f25530f515))
+    - Add no_std feature ([`30f1fab`](https://github.com/vadorovsky/aya/commit/30f1fabc05654e8d11dd2648767895123c141c3b))
+    - Add integration tests against rbpf ([`311ead6`](https://github.com/vadorovsky/aya/commit/311ead6760ce53e9503af00391e6631f7387ab4a))
+    - Add basic documentation to public members ([`e52497c`](https://github.com/vadorovsky/aya/commit/e52497cb9c02123ae450ca36fb6f898d24b25c4b))
+    - Migrate aya::obj into a separate crate ([`ac49827`](https://github.com/vadorovsky/aya/commit/ac49827e204801079be2b87160a795ef412bd6cb))
+    - Migrate bindgen destination ([`81bc307`](https://github.com/vadorovsky/aya/commit/81bc307dce452f0aacbfbe8c304089d11ddd8c5e))
 </details>
 
