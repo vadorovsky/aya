@@ -87,6 +87,7 @@ pub mod sk_storage;
 pub mod sock;
 pub mod stack;
 pub mod stack_trace;
+pub mod task_storage;
 pub mod xdp;
 
 pub use array::{Array, CgroupArray, PerCpuArray, ProgramArray};
@@ -109,6 +110,7 @@ pub use sk_storage::SkStorage;
 pub use sock::{ReusePortSockArray, SockHash, SockMap};
 pub use stack::Stack;
 pub use stack_trace::StackTraceMap;
+pub use task_storage::TaskStorage;
 pub use xdp::{CpuMap, DevMap, DevMapHash, XskMap};
 
 /// Trait for constructing a typed map from [`MapData`].
@@ -360,6 +362,8 @@ pub enum Map {
     Stack(MapData),
     /// A [`StackTraceMap`] map.
     StackTraceMap(MapData),
+    /// A [`TaskStorage`] map.
+    TaskStorage(MapData),
     /// An unsupported map type.
     Unsupported(MapData),
     /// A [`XskMap`] map.
@@ -398,6 +402,7 @@ impl Map {
             Self::SkStorage(map) => map.obj.map_type(),
             Self::Stack(map) => map.obj.map_type(),
             Self::StackTraceMap(map) => map.obj.map_type(),
+            Self::TaskStorage(map) => map.obj.map_type(),
             Self::Unsupported(map) => map.obj.map_type(),
             Self::XskMap(map) => map.obj.map_type(),
         }
@@ -437,6 +442,7 @@ impl Map {
             Self::SkStorage(map) => map.pin(path),
             Self::Stack(map) => map.pin(path),
             Self::StackTraceMap(map) => map.pin(path),
+            Self::TaskStorage(map) => map.pin(path),
             Self::Unsupported(map) => map.pin(path),
             Self::XskMap(map) => map.pin(path),
         }
@@ -483,7 +489,7 @@ impl Map {
             bpf_map_type::BPF_MAP_TYPE_SK_STORAGE => Self::SkStorage(map_data),
             bpf_map_type::BPF_MAP_TYPE_STRUCT_OPS => Self::Unsupported(map_data),
             bpf_map_type::BPF_MAP_TYPE_INODE_STORAGE => Self::InodeStorage(map_data),
-            bpf_map_type::BPF_MAP_TYPE_TASK_STORAGE => Self::Unsupported(map_data),
+            bpf_map_type::BPF_MAP_TYPE_TASK_STORAGE => Self::TaskStorage(map_data),
             bpf_map_type::BPF_MAP_TYPE_USER_RINGBUF => Self::Unsupported(map_data),
             bpf_map_type::BPF_MAP_TYPE_CGRP_STORAGE => Self::CgrpStorage(map_data),
             bpf_map_type::BPF_MAP_TYPE_ARENA => Self::Unsupported(map_data),
@@ -551,6 +557,7 @@ impl_map_pin!((V) {
     Queue,
     SkStorage,
     Stack,
+    TaskStorage,
 });
 
 impl_map_pin!((K, V) {
@@ -640,6 +647,7 @@ impl_try_from_map!((V) {
     SockHash,
     SkStorage,
     Stack,
+    TaskStorage,
 });
 
 impl_try_from_map!((K, V) {
@@ -712,7 +720,7 @@ impl_from_map_data!(<()> RingBuf via map_data);
 
 impl_from_map_data!((V) {
     Array, BloomFilter, CgrpStorage, InodeStorage, PerCpuArray,
-    Queue, SockHash, SkStorage, Stack,
+    Queue, SockHash, SkStorage, Stack, TaskStorage,
 });
 
 impl_from_map_data!((K, V) {

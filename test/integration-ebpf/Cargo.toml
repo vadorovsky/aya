@@ -207,3 +207,7 @@ path = "src/inode_storage.rs"
 [[bin]]
 name = "cgrp_storage"
 path = "src/cgrp_storage.rs"
+
+[[bin]]
+name = "task_storage"
+path = "src/task_storage.rs"

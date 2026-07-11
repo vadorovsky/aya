@@ -22,6 +22,7 @@ pub mod sock_hash;
 pub mod sock_map;
 pub mod stack;
 pub mod stack_trace;
+pub mod task_storage;
 pub mod xsk_map;
 
 pub use array::Array;
@@ -52,6 +53,7 @@ pub use sock_hash::SockHash;
 pub use sock_map::SockMap;
 pub use stack::Stack;
 pub use stack_trace::StackTrace;
+pub use task_storage::TaskStorage;
 pub use xsk_map::XskMap;
 
 mod private {
