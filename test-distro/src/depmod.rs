@@ -20,10 +20,17 @@ use walkdir::WalkDir;
 struct Args {
     #[clap(long, short)]
     base_dir: Option<PathBuf>,
+
+    /// File to which to write the module aliases.
+    #[clap(long)]
+    output_file: Option<PathBuf>,
 }
 
 fn main() -> anyhow::Result<()> {
-    let Args { base_dir } = Parser::parse();
+    let Args {
+        base_dir,
+        output_file,
+    } = Parser::parse();
 
     let modules_dir = if let Some(base_dir) = base_dir.as_deref() {
         base_dir
@@ -32,12 +39,23 @@ fn main() -> anyhow::Result<()> {
         Path::new(modules_dir)
     };
 
-    let modules_alias = modules_dir.join("modules.alias");
+    let modules_alias = output_file.unwrap_or_else(|| modules_dir.join("modules.alias"));
+    if let Some(parent) = modules_alias
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        std::fs::create_dir_all(parent)
+            .with_context(|| format!("failed to create: {}", parent.display()))?;
+    }
+    generate_modules_alias(&modules_dir, &modules_alias)
+}
+
+fn generate_modules_alias(modules_dir: &Path, modules_alias: &Path) -> anyhow::Result<()> {
     let f = std::fs::OpenOptions::new()
         .create(true)
         .write(true)
         .truncate(true)
-        .open(&modules_alias)
+        .open(modules_alias)
         .with_context(|| format!("failed to open: {}", modules_alias.display()))?;
     let mut output = BufWriter::new(&f);
     for entry in WalkDir::new(modules_dir) {
@@ -122,9 +140,23 @@ fn write_aliases_from_modinfo(
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
     use assert_matches::assert_matches;
 
-    use super::{modinfo_entries, write_aliases_from_modinfo};
+    use super::{generate_modules_alias, modinfo_entries, write_aliases_from_modinfo};
+
+    #[test]
+    fn writes_modules_alias_to_separate_output_file() {
+        let modules_dir = tempfile::tempdir().unwrap();
+        let output_root = tempfile::tempdir().unwrap();
+        let output_file = output_root.path().join("aliases");
+
+        generate_modules_alias(modules_dir.path(), &output_file).unwrap();
+
+        assert!(!modules_dir.path().join("modules.alias").exists());
+        assert_eq!(fs::read(output_file).unwrap(), b"");
+    }
 
     #[test]
     fn modinfo_entries_reads_nul_delimited_records() {

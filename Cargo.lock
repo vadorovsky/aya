@@ -1516,6 +1516,7 @@ dependencies = [
  "nix",
  "object",
  "rstest",
+ "tempfile",
  "walkdir",
  "xz2",
  "zstd",
