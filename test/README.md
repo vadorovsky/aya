@@ -27,7 +27,14 @@ cargo xtask integration-test local
 ### Virtualized
 
 ```bash
-cargo xtask integration-test vm ubuntu --cache-dir <CACHE_DIR> <KERNEL_ARCHIVES>...
+cargo xtask integration-test vm --kernel-arch <ARCH> ubuntu \
+  --cache-dir <CACHE_DIR> <VERSIONS>...
+```
+
+To use an already-built kernel source tree, pass its build directory instead:
+
+```bash
+cargo xtask integration-test vm --kernel-arch <ARCH> source <SOURCE>
 ```
 
 ### Writing an integration test

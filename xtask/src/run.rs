@@ -3,6 +3,7 @@
 #![allow(clippy::use_debug, reason = "debug output aids troubleshooting")]
 
 use std::{
+    collections::BTreeSet,
     env,
     ffi::{OsStr, OsString},
     fmt::{Arguments, Write as _},
@@ -53,9 +54,19 @@ impl Drop for GitHubLogGroup {
 enum VMEnvironment {
     /// Uses a mainline kernel from Ubuntu.
     Ubuntu {
+        /// The cache directory in which to store downloaded kernel packages.
+        #[clap(long)]
+        cache_dir: PathBuf,
+
         /// Ubuntu Mainline versions such as 5.15 or 6.6.
         #[clap(required = true, value_name = "VERSION")]
         kernels: Vec<String>,
+    },
+    /// Uses a kernel built from source.
+    Source {
+        /// Built kernel source tree.
+        #[clap(required = true, value_name = "SOURCE")]
+        source: PathBuf,
     },
 }
 
@@ -72,10 +83,6 @@ enum Environment {
         /// The environment uses in the virtual machine.
         #[clap(subcommand)]
         vm_environment: VMEnvironment,
-
-        /// The cache directory in which to store intermediate artifacts.
-        #[clap(long)]
-        cache_dir: PathBuf,
 
         /// Architecture of the kernel.
         #[clap(long, value_enum)]
@@ -151,6 +158,132 @@ where
         bail!("{cargo:?} failed: {status:?}")
     }
     Ok(executables)
+}
+
+enum KernelPackages {
+    Multiple(Vec<KernelPackage>),
+    Single(KernelPackage),
+}
+
+enum KernelPackagesIntoIter {
+    Multiple(std::vec::IntoIter<KernelPackage>),
+    Single(std::iter::Once<KernelPackage>),
+}
+
+#[derive(Clone, Copy)]
+enum KernelModulesLayout {
+    Installed,
+    SourceTree,
+}
+
+impl Iterator for KernelPackagesIntoIter {
+    type Item = KernelPackage;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Multiple(iter) => iter.next(),
+            Self::Single(iter) => iter.next(),
+        }
+    }
+}
+
+impl IntoIterator for KernelPackages {
+    type Item = KernelPackage;
+    type IntoIter = KernelPackagesIntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Self::Multiple(packages) => KernelPackagesIntoIter::Multiple(packages.into_iter()),
+            Self::Single(package) => KernelPackagesIntoIter::Single(std::iter::once(package)),
+        }
+    }
+}
+
+#[expect(
+    clippy::filetype_is_file,
+    reason = "only regular kernel module artifacts should be included"
+)]
+fn is_kernel_module(entry: &walkdir::DirEntry) -> bool {
+    entry.file_type().is_file() && entry.path().extension() == Some(OsStr::new("ko"))
+}
+
+fn source_kernel_modules(
+    source: &Path,
+) -> impl Iterator<Item = walkdir::Result<walkdir::DirEntry>> + '_ {
+    WalkDir::new(source)
+        .into_iter()
+        .filter(|entry| match entry {
+            Ok(entry) => is_kernel_module(entry),
+            // Preserve errors so the caller can report them rather than silently
+            // treating an unreadable subtree as one without modules.
+            Err(_) => true,
+        })
+}
+
+fn source_module_archive_path(source: &Path, module: &Path) -> Result<PathBuf> {
+    let relative = module.strip_prefix(source).with_context(|| {
+        format!(
+            "failed to make {} relative to {}",
+            module.display(),
+            source.display()
+        )
+    })?;
+    Ok(Path::new("lib/modules/kernel").join(relative))
+}
+
+fn kernel_package_from_source(
+    source: &Path,
+    architecture: KernelArchitecture,
+) -> Result<KernelPackage> {
+    fn require_file(path: &Path, artifact: &str) -> Result<()> {
+        let metadata = path
+            .metadata()
+            .with_context(|| format!("failed to find {artifact} at {}", path.display()))?;
+        if !metadata.is_file() {
+            bail!("{artifact} at {} is not a regular file", path.display());
+        }
+        Ok(())
+    }
+
+    let kernel_release_file = source.join("include/config/kernel.release");
+    let kernel_release = fs::read_to_string(&kernel_release_file).with_context(|| {
+        format!(
+            "failed to read the kernel release from {}",
+            kernel_release_file.display()
+        )
+    })?;
+    let kernel_release = kernel_release.trim();
+    let base = PathBuf::from(kernel_release);
+    if base.file_name() != Some(base.as_os_str()) {
+        bail!(
+            "kernel release in {} is not a single path component: {kernel_release:?}",
+            kernel_release_file.display()
+        );
+    }
+
+    let kernel_image = match architecture {
+        KernelArchitecture::Amd64 => source.join("arch/x86/boot/bzImage"),
+        KernelArchitecture::Arm64 => source.join("arch/arm64/boot/Image"),
+    };
+    let config = source.join(".config");
+    let system_map = source.join("System.map");
+    for (path, artifact) in [
+        (&kernel_image, "kernel image"),
+        (&config, "kernel configuration"),
+        (&system_map, "kernel symbol map"),
+    ] {
+        require_file(path, artifact)?;
+    }
+
+    Ok(KernelPackage {
+        base,
+        kernel_image,
+        config,
+        // depmod scans the built modules directly in the source tree. They are
+        // mapped to the installed layout only while writing the initramfs.
+        modules_dir: source.to_path_buf(),
+        system_map,
+    })
 }
 
 /// Magic bytes of a newc archive, according to the [initramfs buffer format][initramfs-format]
@@ -418,15 +551,15 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
         }
         Environment::VM {
             vm_environment,
-            cache_dir,
             kernel_arch,
         } => {
             // The user has asked us to run the tests on a VM. This is involved; strap in.
             //
-            // We resolve Ubuntu Mainline kernel versions for the requested
-            // architecture. We then build the init program and our test
-            // binaries for that architecture, and build an initramfs containing the test
-            // binaries. We're ready to run the VM.
+            // We prepare the requested kernel, either by resolving Ubuntu
+            // Mainline packages or by using a built source tree. We then build
+            // the init program and our test binaries for that architecture,
+            // and build an initramfs containing the test binaries. We're ready
+            // to run the VM.
             //
             // We start QEMU with the provided kernel image and the initramfs we built.
             //
@@ -436,18 +569,25 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
             //
             // The end.
 
-            fs::create_dir_all(&cache_dir).context("failed to create cache dir")?;
-            let http_client = HttpClient::new();
-
             let extraction_root = tempfile::tempdir().context("tempdir failed")?;
-            let kernel_packages = match vm_environment {
-                VMEnvironment::Ubuntu { kernels } => download_ubuntu_mainline_kernel_packages(
-                    &http_client,
-                    &cache_dir,
-                    extraction_root.path(),
-                    kernel_arch,
-                    &kernels,
-                )?,
+            let (kernel_packages, kernel_modules_layout) = match vm_environment {
+                VMEnvironment::Ubuntu { cache_dir, kernels } => {
+                    fs::create_dir_all(&cache_dir).context("failed to create cache dir")?;
+                    (
+                        KernelPackages::Multiple(download_ubuntu_mainline_kernel_packages(
+                            &HttpClient::new(),
+                            &cache_dir,
+                            extraction_root.path(),
+                            kernel_arch,
+                            &kernels,
+                        )?),
+                        KernelModulesLayout::Installed,
+                    )
+                }
+                VMEnvironment::Source { source } => (
+                    KernelPackages::Single(kernel_package_from_source(&source, kernel_arch)?),
+                    KernelModulesLayout::SourceTree,
+                ),
             };
 
             let mut errors = Vec::new();
@@ -592,12 +732,15 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
                 // At this point we need to make a slight detour!
                 // Preparing the `modules.alias` file inside the VM as part of
                 // `/init` is slow. It's faster to prepare it here.
+                let modules_alias = tmp_dir.path().join("modules.alias");
                 let mut cargo = Command::new("cargo");
                 let output = cargo
                     .arg("run")
                     .args(test_distro_args)
                     .args(["--bin", "depmod", "--", "-b"])
                     .arg(&modules_dir)
+                    .arg("--output-file")
+                    .arg(&modules_alias)
                     .output()
                     .with_context(|| format!("failed to run {cargo:?}"))?;
                 let Output { status, .. } = &output;
@@ -605,32 +748,85 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
                     bail!("{cargo:?} failed: {output:?}")
                 }
 
-                // Now our modules.alias file is built, we can recursively
-                // walk the modules directory and add all the files to the
-                // initramfs.
-                for entry in WalkDir::new(&modules_dir) {
-                    let entry = entry.context("read_dir failed")?;
-                    let path = entry.path();
-                    let metadata = entry.metadata().context("metadata failed")?;
-                    let out_path = Path::new("lib/modules").join(
-                        path.strip_prefix(&modules_dir).with_context(|| {
-                            format!(
-                                "strip prefix {} failed for {}",
-                                path.display(),
-                                modules_dir.display()
-                            )
-                        })?,
-                    );
-                    #[expect(
-                        clippy::filetype_is_file,
-                        reason = "we only want to copy regular files"
-                    )]
-                    if metadata.file_type().is_dir() {
-                        initrd_archive.append_dir(out_path, executable_mode, mtime)?;
-                    } else if metadata.file_type().is_file() {
-                        initrd_archive.append_file(out_path, path, regular_mode, mtime)?;
+                match kernel_modules_layout {
+                    KernelModulesLayout::Installed => {
+                        // Ubuntu's module package is already in the installed
+                        // layout, so preserve it as-is apart from replacing
+                        // its modules.alias with the one generated above.
+                        for entry in WalkDir::new(&modules_dir) {
+                            let entry = entry.context("read_dir failed")?;
+                            let path = entry.path();
+                            let relative = path.strip_prefix(&modules_dir).with_context(|| {
+                                format!(
+                                    "strip prefix {} failed for {}",
+                                    modules_dir.display(),
+                                    path.display()
+                                )
+                            })?;
+                            if relative == Path::new("modules.alias") {
+                                continue;
+                            }
+
+                            let metadata = entry.metadata().context("metadata failed")?;
+                            let out_path = Path::new("lib/modules").join(relative);
+                            #[expect(
+                                clippy::filetype_is_file,
+                                reason = "we only want to copy regular files"
+                            )]
+                            if metadata.file_type().is_dir() {
+                                initrd_archive.append_dir(out_path, executable_mode, mtime)?;
+                            } else if metadata.file_type().is_file() {
+                                initrd_archive.append_file(out_path, path, regular_mode, mtime)?;
+                            }
+                        }
+                    }
+                    KernelModulesLayout::SourceTree => {
+                        let modules_root = Path::new("lib/modules");
+                        let modules_kernel_root = modules_root.join("kernel");
+                        initrd_archive.append_dir(modules_root, executable_mode, mtime)?;
+                        initrd_archive.append_dir(&modules_kernel_root, executable_mode, mtime)?;
+
+                        let mut appended_directories = BTreeSet::from([
+                            modules_root.to_path_buf(),
+                            modules_kernel_root.clone(),
+                        ]);
+                        for entry in source_kernel_modules(&modules_dir) {
+                            let entry = entry.context("failed to walk the kernel source tree")?;
+                            let source_module = entry.path();
+                            let out_path = source_module_archive_path(&modules_dir, source_module)?;
+                            let relative = out_path.strip_prefix(&modules_kernel_root).expect(
+                                "source module archive paths are below the kernel module root",
+                            );
+
+                            let mut directory = modules_kernel_root.clone();
+                            if let Some(parent) = relative.parent() {
+                                for component in parent.components() {
+                                    directory.push(component);
+                                    if appended_directories.insert(directory.clone()) {
+                                        initrd_archive.append_dir(
+                                            &directory,
+                                            executable_mode,
+                                            mtime,
+                                        )?;
+                                    }
+                                }
+                            }
+
+                            initrd_archive.append_file(
+                                out_path,
+                                source_module,
+                                regular_mode,
+                                mtime,
+                            )?;
+                        }
                     }
                 }
+                initrd_archive.append_file(
+                    "lib/modules/modules.alias",
+                    modules_alias,
+                    regular_mode,
+                    mtime,
+                )?;
 
                 for (profile, binaries) in binaries {
                     for (name, binary) in binaries {
@@ -798,5 +994,101 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
                 Err(Errors::new(errors).into())
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{fs, path::Path};
+
+    use clap::Parser as _;
+
+    use super::{
+        Environment, KernelArchitecture, Options, VMEnvironment, source_kernel_modules,
+        source_module_archive_path,
+    };
+
+    #[test]
+    fn finds_built_kernel_modules_in_source_tree() {
+        let source = tempfile::tempdir().unwrap();
+        let module_dir = source.path().join("drivers/net");
+        fs::create_dir_all(&module_dir).unwrap();
+        let module = module_dir.join("example.ko");
+        fs::write(&module, b"kernel module").unwrap();
+        fs::write(module_dir.join("example.o"), b"object file").unwrap();
+
+        let modules = source_kernel_modules(source.path())
+            .map(|entry| entry.unwrap().into_path())
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            modules.len(),
+            1,
+            "non-module build artifacts must be ignored"
+        );
+        assert_eq!(modules[0], module);
+        assert_eq!(
+            source_module_archive_path(source.path(), &module).unwrap(),
+            Path::new("lib/modules/kernel/drivers/net/example.ko")
+        );
+    }
+
+    #[test]
+    fn parses_ubuntu_vm_environment() {
+        let Options {
+            environment:
+                Environment::VM {
+                    kernel_arch,
+                    vm_environment: VMEnvironment::Ubuntu { cache_dir, kernels },
+                },
+            ..
+        } = Options::try_parse_from([
+            "xtask",
+            "vm",
+            "--kernel-arch",
+            "amd64",
+            "ubuntu",
+            "--cache-dir",
+            "cache",
+            "6.6",
+        ])
+        .unwrap()
+        else {
+            panic!("expected the Ubuntu VM environment")
+        };
+
+        assert_eq!(cache_dir, Path::new("cache"));
+        assert!(matches!(kernel_arch, KernelArchitecture::Amd64));
+        assert_eq!(kernels, ["6.6"]);
+    }
+
+    #[test]
+    fn parses_source_vm_environment_without_cache() {
+        let Options {
+            environment:
+                Environment::VM {
+                    vm_environment: VMEnvironment::Source { source },
+                    kernel_arch,
+                },
+            run_args,
+            ..
+        } = Options::try_parse_from([
+            "xtask",
+            "vm",
+            "--kernel-arch",
+            "arm64",
+            "source",
+            "/kernel",
+            "--",
+            "test_filter",
+        ])
+        .unwrap()
+        else {
+            panic!("expected the source VM environment")
+        };
+
+        assert_eq!(source, Path::new("/kernel"));
+        assert!(matches!(kernel_arch, KernelArchitecture::Arm64));
+        assert_eq!(run_args, ["test_filter"]);
     }
 }
