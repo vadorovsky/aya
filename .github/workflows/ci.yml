@@ -469,7 +469,7 @@ jobs:
         run: |
           set -euxo pipefail
 
-          cargo xtask integration-test vm --cache-dir test/.tmp \
+          cargo xtask integration-test vm ubuntu --cache-dir test/.tmp \
             --kernel-arch ${{ matrix.vm-kernels }}
 
       - name: Compute VM integration test cache key

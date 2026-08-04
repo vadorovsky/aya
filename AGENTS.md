@@ -21,7 +21,7 @@
 - Testing (if local machine is not Linux):
 
   ```sh
-  cargo xtask integration-test vm \
+  cargo xtask integration-test vm ubuntu \
     --cache-dir test/.tmp --kernel-arch <arch> [VERSIONS]... \
     -- <test-filter> [ARGS]...
   ```

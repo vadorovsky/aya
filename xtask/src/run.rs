@@ -50,6 +50,16 @@ impl Drop for GitHubLogGroup {
 }
 
 #[derive(Parser)]
+enum VMEnvironment {
+    /// Uses a mainline kernel from Ubuntu.
+    Ubuntu {
+        /// Ubuntu Mainline versions such as 5.15 or 6.6.
+        #[clap(required = true, value_name = "VERSION")]
+        kernels: Vec<String>,
+    },
+}
+
+#[derive(Parser)]
 enum Environment {
     /// Runs the integration tests locally.
     Local {
@@ -59,17 +69,17 @@ enum Environment {
     },
     /// Runs the integration tests in a VM.
     VM {
+        /// The environment uses in the virtual machine.
+        #[clap(subcommand)]
+        vm_environment: VMEnvironment,
+
         /// The cache directory in which to store intermediate artifacts.
         #[clap(long)]
         cache_dir: PathBuf,
 
-        /// Ubuntu Mainline architecture to resolve kernel version arguments for.
+        /// Architecture of the kernel.
         #[clap(long, value_enum)]
         kernel_arch: KernelArchitecture,
-
-        /// Ubuntu Mainline versions such as 5.15 or 6.6.
-        #[clap(required = true, value_name = "VERSION")]
-        kernels: Vec<String>,
     },
 }
 
@@ -407,9 +417,9 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
             }
         }
         Environment::VM {
+            vm_environment,
             cache_dir,
             kernel_arch,
-            kernels,
         } => {
             // The user has asked us to run the tests on a VM. This is involved; strap in.
             //
@@ -430,13 +440,15 @@ pub(crate) fn run(opts: Options, workspace_root: &Path) -> Result<()> {
             let http_client = HttpClient::new();
 
             let extraction_root = tempfile::tempdir().context("tempdir failed")?;
-            let kernel_packages = download_ubuntu_mainline_kernel_packages(
-                &http_client,
-                &cache_dir,
-                extraction_root.path(),
-                kernel_arch,
-                &kernels,
-            )?;
+            let kernel_packages = match vm_environment {
+                VMEnvironment::Ubuntu { kernels } => download_ubuntu_mainline_kernel_packages(
+                    &http_client,
+                    &cache_dir,
+                    extraction_root.path(),
+                    kernel_arch,
+                    &kernels,
+                )?,
+            };
 
             let mut errors = Vec::new();
             for kernel_package in kernel_packages {
