@@ -783,13 +783,13 @@ dependencies = [
 name = "integration-ebpf"
 version = "0.1.0"
 dependencies = [
+ "aya-build",
  "aya-ebpf",
  "aya-log-ebpf",
  "ebpf-panic",
  "integration-common",
  "network-types",
  "which",
- "xtask",
 ]
 
 [[package]]
@@ -2206,6 +2206,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ar",
+ "aya-build",
  "aya-tool",
  "cargo_metadata",
  "clap",

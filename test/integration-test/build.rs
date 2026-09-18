@@ -12,8 +12,9 @@ use std::{
 };
 
 use anyhow::{Context as _, Ok, Result, anyhow};
+use aya_build::{should_build_integration_bpf, AYA_BUILD_INTEGRATION_BPF};
 use cargo_metadata::{Metadata, MetadataCommand, Package, Target, TargetKind};
-use xtask::{AYA_BUILD_INTEGRATION_BPF, LIBBPF_DIR, exec, install_libbpf_headers_cmd};
+use xtask::{LIBBPF_DIR, exec, install_libbpf_headers_cmd};
 
 /// This file, along with the xtask crate, allows analysis tools such as `cargo check`, `cargo
 /// clippy`, and even `cargo build` to work as users expect. Prior to this file's existence, this
@@ -31,26 +32,7 @@ use xtask::{AYA_BUILD_INTEGRATION_BPF, LIBBPF_DIR, exec, install_libbpf_headers_
 fn main() -> Result<()> {
     println!("cargo:rerun-if-env-changed={AYA_BUILD_INTEGRATION_BPF}");
 
-    // TODO(https://github.com/rust-lang/cargo/issues/4001): generalize this and move it to
-    // aya-build if we can determine that we're in a check build.
-    let build_integration_bpf = env::var_os(AYA_BUILD_INTEGRATION_BPF)
-        .map(|build_integration_bpf| {
-            let build_integration_bpf = std::str::from_utf8(
-                build_integration_bpf.as_encoded_bytes(),
-            )
-            .with_context(|| {
-                format!(
-                    "{AYA_BUILD_INTEGRATION_BPF}={}",
-                    build_integration_bpf.display()
-                )
-            })?;
-            let build_integration_bpf = build_integration_bpf
-                .parse()
-                .with_context(|| format!("{AYA_BUILD_INTEGRATION_BPF}={build_integration_bpf}"))?;
-            Ok(build_integration_bpf)
-        })
-        .transpose()?
-        .unwrap_or_default();
+    let build_integration_bpf = should_build_integration_bpf()?;
 
     let Metadata {
         packages,

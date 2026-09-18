@@ -1,7 +1,6 @@
-use std::env;
-
+use aya_build::AYA_BUILD_INTEGRATION_BPF;
 use which::which;
-use xtask::AYA_BUILD_INTEGRATION_BPF;
+use aya_build::should_build_integration_bpf;
 
 /// Building this crate has an undeclared dependency on the `bpf-linker` binary. This would be
 /// better expressed by [artifact-dependencies][bindeps] but issues such as
@@ -17,10 +16,7 @@ use xtask::AYA_BUILD_INTEGRATION_BPF;
 fn main() {
     println!("cargo:rerun-if-env-changed={AYA_BUILD_INTEGRATION_BPF}");
 
-    let build_integration_bpf = env::var(AYA_BUILD_INTEGRATION_BPF)
-        .as_deref()
-        .map(str::parse)
-        .is_ok_and(Result::unwrap);
+    let build_integration_bpf = should_build_integration_bpf().unwrap_or_default();
 
     if build_integration_bpf {
         let bpf_linker = which("bpf-linker").unwrap();

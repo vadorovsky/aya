@@ -14,6 +14,25 @@ use cargo_metadata::{Artifact, CompilerMessage, Message, Target};
 use rustc_version::Channel;
 use which::which;
 
+/// Environment variable name for controlling whether to build BPF artifacts
+/// for integration tests.
+pub const AYA_BUILD_INTEGRATION_BPF: &str = "AYA_BUILD_INTEGRATION_BPF";
+
+/// Returns `true` if the `AYA_BUILD_INTEGRATION_BPF` environment variable is
+/// set to `"true"`.
+///
+/// Returns `false` if the variable is set to `"false"` or is not set.
+pub fn should_build_integration_bpf() -> Result<bool> {
+    let val = env::var(AYA_BUILD_INTEGRATION_BPF).ok();
+    match val.as_deref() {
+        Some("true") => Ok(true),
+        Some("false") | None => Ok(false),
+        Some(_) => Err(anyhow::anyhow!(
+            "{AYA_BUILD_INTEGRATION_BPF} must be either `true` or `false`"
+        )),
+    }
+}
+
 #[derive(Default)]
 pub struct Package<'a> {
     pub name: &'a str,
